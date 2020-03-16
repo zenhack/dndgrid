@@ -8,20 +8,12 @@ import Html.Attributes exposing (style)
 
 centered : Html msg -> Html msg
 centered item =
-    Grid.view identity
-        { rows = 1
-        , cols = 3
-        , items =
-            [ { item = item
-              , loc =
-                    { x = 2
-                    , y = 1
-                    , w = 1
-                    , h = 1
-                    }
-              }
-            ]
-        }
+    div
+        [ style "display" "flex"
+        , style "align-items" "center"
+        , style "justify-content" "space-around"
+        ]
+        [ item ]
 
 
 init =
