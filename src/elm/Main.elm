@@ -6,6 +6,24 @@ import Html exposing (..)
 import Html.Attributes exposing (style)
 
 
+centered : Html msg -> Html msg
+centered item =
+    Grid.view identity
+        { rows = 1
+        , cols = 3
+        , items =
+            [ { item = item
+              , loc =
+                    { x = 2
+                    , y = 1
+                    , w = 1
+                    , h = 1
+                    }
+              }
+            ]
+        }
+
+
 init =
     Grid.merge
         (Grid.repeat 4 4 cell)
@@ -36,5 +54,5 @@ main =
     Browser.sandbox
         { init = init
         , update = \() m -> m
-        , view = Grid.view identity
+        , view = Grid.view identity >> centered
         }

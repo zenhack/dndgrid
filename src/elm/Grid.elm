@@ -76,8 +76,7 @@ view viewItem { rows, cols, items } =
     in
     div
         [ style "display" "grid"
-        , style "row-gap" "0px"
-        , style "column-gap" "0px"
+        , style "gap" "0px"
         , style "grid-template-rows" (repeat1Fr rows)
         , style "grid-template-columns" (repeat1Fr cols)
         ]
