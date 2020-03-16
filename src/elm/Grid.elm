@@ -1,4 +1,4 @@
-module Grid exposing (Box, Grid, GridItem, fromFunction, merge, view)
+module Grid exposing (Box, Grid, GridItem, fromFunction, merge, repeat, view)
 
 import Html exposing (..)
 import Html.Attributes exposing (style)
@@ -23,6 +23,11 @@ type alias Box =
     , w : Int
     , h : Int
     }
+
+
+repeat : Int -> Int -> a -> Grid a
+repeat x y v =
+    fromFunction (\_ _ -> Just v) x y
 
 
 merge : Grid a -> Grid a -> Grid a

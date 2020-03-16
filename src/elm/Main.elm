@@ -6,13 +6,9 @@ import Html exposing (..)
 import Html.Attributes exposing (style)
 
 
-nByM v =
-    Grid.fromFunction (\_ _ -> Just v)
-
-
-theGrid =
+init =
     Grid.merge
-        (nByM cell 4 4)
+        (Grid.repeat 4 4 cell)
         (Grid.fromFunction
             (\x y ->
                 if x == y then
@@ -38,7 +34,7 @@ cell =
 
 main =
     Browser.sandbox
-        { init = theGrid
-        , update = \_ _ -> theGrid
+        { init = init
+        , update = \() m -> m
         , view = Grid.view identity
         }
