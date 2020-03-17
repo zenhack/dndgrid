@@ -9,9 +9,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // https://package.elm-lang.org/packages/bburdette/websocket/latest/
   const mySockets = {};
   function sendSocketCommand(wat) {
+    console.log(wat)
     if (wat.cmd == "connect")
     {
-      const socket = new WebSocket(wat.address, wat.protocol);
+      let scheme;
+      switch(window.location.protocol) {
+        case "http:":
+          scheme = 'ws';
+          break;
+        case "https:":
+          scheme = 'wss';
+          break;
+        default:
+          throw("Not running over http; can't infer websocket scheme.");
+      }
+      const addr = scheme + "://" + window.location.host;
+      const socket = new WebSocket(addr, 'whateverproto');
       socket.onmessage = function (event) {
         app.ports.receiveSocketMsg.send({ name : wat.name
                                         , msg : "data"

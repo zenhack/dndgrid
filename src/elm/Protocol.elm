@@ -4,6 +4,8 @@ module Protocol exposing
     , ServerMsg(..)
     , UnitId
     , UnitInfo
+    , connect
+    , disconnect
     , recv
     , send
     )
@@ -51,14 +53,14 @@ encodeClientMsg =
 
 decodeServerMsg : D.Decoder ServerMsg
 decodeServerMsg =
-    D.map2 Welcome
+    D.map2 (\cid units -> Welcome { yourClientId = cid, unitInfo = units })
         (D.field "yourClientId" D.int)
         (D.field "unitInfo" (D.list decodeUnitInfo))
 
 
 decodeUnitInfo : D.Decoder UnitInfo
 decodeUnitInfo =
-    D.map4
+    D.map4 UnitInfo
         (D.field "x" D.int)
         (D.field "y" D.int)
         (D.field "id" decodeUnitId)
@@ -73,18 +75,21 @@ decodeUnitId =
 
 
 recv : (Result Error ServerMsg -> msg) -> Sub msg
-recv =
+recv toMsg =
     Ports.receiveSocketMsg <|
         WebSocket.receive
-            (Result.andThen
-                (\wsmsg ->
-                    case wsmsg of
-                        WebSocket.Data { data } ->
-                            D.decodeString decodeServerMsg data
+            (Result.mapError JsonDecodeError
+                >> Result.andThen
+                    (\wsmsg ->
+                        case wsmsg of
+                            WebSocket.Data { data } ->
+                                D.decodeString decodeServerMsg data
+                                    |> Result.mapError JsonDecodeError
 
-                        WebSocket.Error { error } ->
-                            WebSocketError error
-                )
+                            WebSocket.Error { error } ->
+                                Err (WebSocketError error)
+                    )
+                >> toMsg
             )
 
 
@@ -93,7 +98,7 @@ send msg =
     WebSocket.send Ports.sendSocketCommand <|
         WebSocket.Send
             { name = ""
-            , data = encodeClientMsg msg
+            , content = E.encode 2 <| encodeClientMsg msg
             }
 
 
@@ -103,7 +108,7 @@ connect =
         WebSocket.Connect
             { name = ""
             , address = "/"
-            , protocol = ""
+            , protocol = "proto"
             }
 
 

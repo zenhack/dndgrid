@@ -6,6 +6,7 @@ import Grid
 import Html exposing (..)
 import Html.Attributes exposing (href, style)
 import Html.Events exposing (onClick, onInput)
+import Protocol
 
 
 gridSize =
@@ -64,8 +65,9 @@ centered item =
         [ item ]
 
 
-init =
-    Model
+init : {} -> ( Model, Cmd Msg )
+init _ =
+    ( Model
         { currentUnit = Nothing
         , units = Dict.empty
         , nextUnit =
@@ -73,6 +75,8 @@ init =
             , name = ""
             }
         }
+    , Protocol.connect
+    )
 
 
 view : Model -> Html Msg
@@ -112,15 +116,15 @@ viewCell x y =
             []
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg (Model m) =
     case msg of
         DeployUnit ->
             if m.nextUnit.name == "" then
-                Model m
+                ( Model m, Cmd.none )
 
             else
-                Model
+                ( Model
                     { m
                         | currentUnit = Just m.nextUnit.id
                         , units =
@@ -133,24 +137,30 @@ update msg (Model m) =
                             , name = ""
                             }
                     }
+                , Cmd.none
+                )
 
         SetUnitName name ->
             let
                 unit =
                     m.nextUnit
             in
-            Model { m | nextUnit = { unit | name = name } }
+            ( Model { m | nextUnit = { unit | name = name } }
+            , Cmd.none
+            )
 
         ChooseUnit id ->
-            Model { m | currentUnit = Just id }
+            ( Model { m | currentUnit = Just id }
+            , Cmd.none
+            )
 
         ChooseSquare x y ->
             case m.currentUnit of
                 Nothing ->
-                    Model m
+                    ( Model m, Cmd.none )
 
                 Just id ->
-                    Model
+                    ( Model
                         { m
                             | currentUnit = Nothing
                             , units =
@@ -159,11 +169,14 @@ update msg (Model m) =
                                     (Maybe.map (\u -> { u | x = x, y = y }))
                                     m.units
                         }
+                    , Cmd.none
+                    )
 
 
 main =
-    Browser.sandbox
+    Browser.element
         { init = init
+        , subscriptions = \_ -> Sub.none
         , update = update
         , view = view
         }
