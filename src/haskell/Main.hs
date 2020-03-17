@@ -12,6 +12,8 @@ import Network.Wai (Application)
 
 import Control.Concurrent.STM
 
+import qualified Protocol as P
+
 
 staticFiles =
     [ ("/", "static/app.html", "text/html")
@@ -19,26 +21,14 @@ staticFiles =
     , ("/setup.js", "static/setup.js", "application/javascript")
     ]
 
-newtype ID a = ID Int
-    deriving(Show, Read, Eq, Ord, Bounded)
-
-data Client = Client
-
-data Unit = Unit
-    { localId  :: ID Unit
-    , clientId :: ID Client
-    }
-
 data GridState = GridState
-    { units :: M.Map (ID Unit) Unit
+    { units :: M.Map P.UnitId P.UnitInfo
     }
 
 data ServerState = ServerState
     { grid    :: GridState
-    , clients :: M.Map (ID Client) Client
+    , clients :: M.Map (P.ID P.Client) P.Client
     }
-
-data Message
 
 initialServerState :: ServerState
 initialServerState = ServerState

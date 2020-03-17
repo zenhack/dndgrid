@@ -59,9 +59,11 @@ common shared-opts
     , OverloadedStrings
   build-depends:
       base ^>=4.13
+    , aeson ^>=1.4.6
     , containers ^>=0.6.2
     , scotty ^>=0.11.5
     , stm ^>=2.5.0
+    , text ^>=1.2.4
     , wai ^>=3.2.2
     , wai-websockets ^>=3.0.1
     , warp ^>=3.3.9
@@ -72,6 +74,8 @@ common shared-opts
 executable dndgrid
   import: shared-opts
   main-is: Main.hs
+  other-modules:
+    Protocol
   hs-source-dirs:      src/haskell
 test-suite tests
   import: shared-opts

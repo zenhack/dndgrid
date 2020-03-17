@@ -2,6 +2,8 @@ module Protocol exposing
     ( ClientMsg(..)
     , Error(..)
     , ServerMsg(..)
+    , UnitId
+    , UnitInfo
     , recv
     , send
     )
@@ -12,12 +14,29 @@ import Ports
 import WebSocket
 
 
+type alias UnitId =
+    { clientId : Int
+    , localId : Int
+    }
+
+
 type ClientMsg
     = ClientMsg
 
 
 type ServerMsg
-    = ServerMsg
+    = Welcome
+        { yourClientId : Int
+        , unitInfo : List UnitInfo
+        }
+
+
+type alias UnitInfo =
+    { x : Int
+    , y : Int
+    , id : UnitId
+    , name : String
+    }
 
 
 type Error
@@ -32,7 +51,25 @@ encodeClientMsg =
 
 decodeServerMsg : D.Decoder ServerMsg
 decodeServerMsg =
-    D.fail "TODO"
+    D.map2 Welcome
+        (D.field "yourClientId" D.int)
+        (D.field "unitInfo" (D.list decodeUnitInfo))
+
+
+decodeUnitInfo : D.Decoder UnitInfo
+decodeUnitInfo =
+    D.map4
+        (D.field "x" D.int)
+        (D.field "y" D.int)
+        (D.field "id" decodeUnitId)
+        (D.field "name" D.string)
+
+
+decodeUnitId : D.Decoder UnitId
+decodeUnitId =
+    D.map2 UnitId
+        (D.field "clientId" D.int)
+        (D.field "localId" D.int)
 
 
 recv : (Result Error ServerMsg -> msg) -> Sub msg
