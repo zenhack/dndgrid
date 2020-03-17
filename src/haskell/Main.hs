@@ -2,6 +2,8 @@ module Main (main) where
 
 import Zhp
 
+import qualified Data.Text as T
+
 import qualified Data.Map.Strict                as M
 import qualified Network.Wai.Handler.Warp       as Warp
 import qualified Network.Wai.Handler.WebSockets as WaiWs
@@ -44,7 +46,10 @@ makeScottyApp serverState = Sc.scottyApp $ do
             Sc.file filePath
 
 wsApp :: TVar ServerState -> Ws.ServerApp
-wsApp _serverState _pending = pure ()
+wsApp serverState pending = do
+    conn <- Ws.acceptRequest pending
+    Ws.withPingThread conn 30 (pure ()) $ do
+        Ws.sendTextData conn ("test" :: T.Text)
 
 makeApp :: IO Application
 makeApp = do
