@@ -5,7 +5,7 @@ import Dict exposing (Dict)
 import Grid
 import Html exposing (..)
 import Html.Attributes exposing (href, style)
-import Html.Events exposing (onClick)
+import Html.Events exposing (onClick, onInput)
 
 
 type alias IDUnit =
@@ -15,6 +15,8 @@ type alias IDUnit =
 type Msg
     = ChooseUnit IDUnit
     | ChooseSquare Int Int
+    | SetUnitName String
+    | DeployUnit
 
 
 type alias Unit =
@@ -28,6 +30,10 @@ type Model
     = Model
         { currentUnit : Maybe IDUnit
         , units : Dict IDUnit Unit
+        , nextUnit :
+            { id : IDUnit
+            , name : String
+            }
         }
 
 
@@ -57,12 +63,11 @@ centered item =
 init =
     Model
         { currentUnit = Nothing
-        , units =
-            Dict.fromList
-                [ ( 1, { x = 1, y = 1, name = "Alice" } )
-                , ( 2, { x = 2, y = 2, name = "Bob" } )
-                , ( 4, { x = 4, y = 4, name = "Dave" } )
-                ]
+        , units = Dict.empty
+        , nextUnit =
+            { id = 0
+            , name = ""
+            }
         }
 
 
@@ -81,7 +86,14 @@ view (Model m) =
                            )
             }
     in
-    centered <| Grid.view identity grid
+    div []
+        [ centered <| Grid.view identity grid
+        , centered <|
+            div []
+                [ input [ onInput SetUnitName ] []
+                , button [ onClick DeployUnit ] [ text "Add Unit" ]
+                ]
+        ]
 
 
 viewCell x y =
@@ -99,6 +111,32 @@ viewCell x y =
 update : Msg -> Model -> Model
 update msg (Model m) =
     case msg of
+        DeployUnit ->
+            if m.nextUnit.name == "" then
+                Model m
+
+            else
+                Model
+                    { m
+                        | currentUnit = Just m.nextUnit.id
+                        , units =
+                            Dict.insert
+                                m.nextUnit.id
+                                { x = 1, y = 1, name = m.nextUnit.name }
+                                m.units
+                        , nextUnit =
+                            { id = m.nextUnit.id + 1
+                            , name = ""
+                            }
+                    }
+
+        SetUnitName name ->
+            let
+                unit =
+                    m.nextUnit
+            in
+            Model { m | nextUnit = { unit | name = name } }
+
         ChooseUnit id ->
             Model { m | currentUnit = Just id }
 
