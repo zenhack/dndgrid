@@ -8,6 +8,10 @@ import Html.Attributes exposing (href, style)
 import Html.Events exposing (onClick, onInput)
 
 
+gridSize =
+    10
+
+
 type alias IDUnit =
     Int
 
@@ -75,7 +79,7 @@ view : Model -> Html Msg
 view (Model m) =
     let
         cells =
-            Grid.fromFunction viewCell 4 4
+            Grid.fromFunction viewCell gridSize gridSize
 
         grid =
             { cells
@@ -87,12 +91,12 @@ view (Model m) =
             }
     in
     div []
-        [ centered <| Grid.view identity grid
-        , centered <|
+        [ centered <|
             div []
                 [ input [ onInput SetUnitName ] []
                 , button [ onClick DeployUnit ] [ text "Add Unit" ]
                 ]
+        , centered <| Grid.view identity grid
         ]
 
 
