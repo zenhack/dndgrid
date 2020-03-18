@@ -2,8 +2,10 @@
 # This file is automatically updated and rewritten in sorted order every time
 # the app runs in dev mode. You may manually add or remove files, but don't
 # expect comments or ordering to be retained.
+bin
 build/dndgrid
 build/dndgrid.js
+default-bg.png
 etc/gai.conf
 etc/ld.so.cache
 lib64
@@ -11,9 +13,17 @@ proc/cpuinfo
 sandstorm-http-bridge
 sandstorm-http-bridge-config
 sandstorm-manifest
+start.sh
 static/app.html
+static/setup.js
+usr/bin/bash
+usr/bin/cp
 usr/lib/ld-2.31.so
 usr/lib/ld-linux-x86-64.so.2
+usr/lib/libacl.so.1
+usr/lib/libacl.so.1.1.2253
+usr/lib/libattr.so.1
+usr/lib/libattr.so.1.1.2448
 usr/lib/libc-2.31.so
 usr/lib/libc.so.6
 usr/lib/libdl-2.31.so
@@ -24,8 +34,14 @@ usr/lib/libgmp.so.10
 usr/lib/libgmp.so.10.4.0
 usr/lib/libm-2.31.so
 usr/lib/libm.so.6
+usr/lib/libncursesw.so.6
+usr/lib/libncursesw.so.6.2
+usr/lib/libnss_files-2.31.so
+usr/lib/libnss_files.so.2
 usr/lib/libpthread-2.31.so
 usr/lib/libpthread.so.0
+usr/lib/libreadline.so.8
+usr/lib/libreadline.so.8.0
 usr/lib/librt-2.31.so
 usr/lib/librt.so.1
 usr/lib/libutil-2.31.so
