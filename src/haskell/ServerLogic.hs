@@ -51,6 +51,10 @@ handleClient server@(Server stateVar) clientConn = do
             }
         writeTChan clientChan P.Welcome
             { P.bgImg = bgCount st
+            , P.gridSize = P.Point
+                { x = 10
+                , y = 10
+                }
             , P.yourClientId = clientId
             , P.unitInfo = M.elems $ units $ grid st
             }

@@ -7,6 +7,7 @@
 -- serialization code.
 module Protocol
     ( ClientMsg(..)
+    , Point(..)
     , ID(..)
     , ServerMsg(..)
     , Client(..)
@@ -71,6 +72,7 @@ data ServerMsg
         { yourClientId :: !(ID Client)
         , unitInfo     :: [UnitInfo]
         , bgImg        :: !Int
+        , gridSize     :: Point
         }
     | UnitMoved UnitMotion
     | UnitAdded UnitInfo

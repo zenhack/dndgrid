@@ -12,10 +12,6 @@ import Http
 import Protocol
 
 
-gridSize =
-    10
-
-
 cellSizePx =
     96
 
@@ -74,6 +70,7 @@ type Model
             }
         , clientId : Int
         , bgImg : Int
+        , gridSize : Protocol.Point
         }
 
 
@@ -132,7 +129,7 @@ view model =
         Ready m ->
             let
                 cells =
-                    Grid.fromFunction viewCell gridSize gridSize
+                    Grid.fromFunction viewCell m.gridSize.x m.gridSize.y
 
                 grid =
                     { cells
@@ -156,32 +153,32 @@ view model =
                         ]
                 , centeredX <|
                     Grid.view identity
-                        (Grid.merge (imgGrid m.bgImg) grid)
+                        (Grid.merge (imgGrid m.gridSize m.bgImg) grid)
                 ]
 
 
-imgGrid : Int -> Grid.Grid (Html Msg)
-imgGrid bgImg =
+imgGrid : Protocol.Point -> Int -> Grid.Grid (Html Msg)
+imgGrid gridSize bgImg =
     let
-        size =
-            String.fromInt (gridSize * cellSizePx) ++ "px"
+        size g =
+            String.fromInt (g * cellSizePx) ++ "px"
     in
-    { rows = gridSize
-    , cols = gridSize
+    { rows = gridSize.x
+    , cols = gridSize.y
     , items =
         [ { item =
                 img
                     [ src <| "/bg/" ++ String.fromInt bgImg ++ "/bg.png"
                     , style "z-index" "-1"
-                    , style "width" size
-                    , style "height" size
+                    , style "width" <| size gridSize.x
+                    , style "height" <| size gridSize.y
                     ]
                     []
           , loc =
                 { x = 1
                 , y = 1
-                , w = gridSize
-                , h = gridSize
+                , w = gridSize.x
+                , h = gridSize.y
                 }
           }
         ]
@@ -318,7 +315,7 @@ update msg model =
 applyServerMsg : Protocol.ServerMsg -> Model -> ( Model, Cmd Msg )
 applyServerMsg msg model =
     case ( msg, model ) of
-        ( Protocol.Welcome { yourClientId, unitInfo, bgImg }, _ ) ->
+        ( Protocol.Welcome { yourClientId, unitInfo, bgImg, gridSize }, _ ) ->
             ( Ready
                 { currentUnit = Nothing
                 , units =
@@ -333,6 +330,7 @@ applyServerMsg msg model =
                 , nextUnit = { id = 0, name = "" }
                 , clientId = yourClientId
                 , bgImg = bgImg
+                , gridSize = gridSize
                 }
             , Cmd.none
             )
