@@ -13,12 +13,24 @@ gridSize =
     10
 
 
-type alias IDUnit =
-    Int
+{-| A globally unique identifier for a unit.
+
+Ideally the type would be:
+
+       { clientId : Int
+       , localId : Int
+       }
+
+...but the record version is not comparable, so we can't use it
+as a dictionary key. so instead we encode it as (clientId, localId)
+
+-}
+type alias UnitID =
+    ( Int, Int )
 
 
 type Msg
-    = ChooseUnit IDUnit
+    = ChooseUnit UnitID
     | ChooseSquare Int Int
     | SetUnitName String
     | DeployUnit
@@ -33,17 +45,19 @@ type alias Unit =
 
 
 type Model
-    = Model
-        { currentUnit : Maybe IDUnit
-        , units : Dict IDUnit Unit
+    = NeedWelcome
+    | Ready
+        { currentUnit : Maybe UnitID
+        , units : Dict UnitID Unit
         , nextUnit :
-            { id : IDUnit
+            { id : Int
             , name : String
             }
+        , clientId : Int
         }
 
 
-unitGridItem : ( IDUnit, Unit ) -> Grid.GridItem (Html Msg)
+unitGridItem : ( UnitID, Unit ) -> Grid.GridItem (Html Msg)
 unitGridItem ( id, { x, y, name } ) =
     { item =
         a [ href "#", onClick (ChooseUnit id) ] [ text name ]
@@ -68,41 +82,39 @@ centered item =
 
 init : {} -> ( Model, Cmd Msg )
 init _ =
-    ( Model
-        { currentUnit = Nothing
-        , units = Dict.empty
-        , nextUnit =
-            { id = 0
-            , name = ""
-            }
-        }
+    ( NeedWelcome
     , Protocol.connect
     )
 
 
 view : Model -> Html Msg
-view (Model m) =
-    let
-        cells =
-            Grid.fromFunction viewCell gridSize gridSize
+view model =
+    case model of
+        NeedWelcome ->
+            text "Loading..."
 
-        grid =
-            { cells
-                | items =
-                    cells.items
-                        ++ (Dict.toList m.units
-                                |> List.map unitGridItem
-                           )
-            }
-    in
-    div []
-        [ centered <|
+        Ready m ->
+            let
+                cells =
+                    Grid.fromFunction viewCell gridSize gridSize
+
+                grid =
+                    { cells
+                        | items =
+                            cells.items
+                                ++ (Dict.toList m.units
+                                        |> List.map unitGridItem
+                                   )
+                    }
+            in
             div []
-                [ input [ onInput SetUnitName ] []
-                , button [ onClick DeployUnit ] [ text "Add Unit" ]
+                [ centered <|
+                    div []
+                        [ input [ onInput SetUnitName ] []
+                        , button [ onClick DeployUnit ] [ text "Add Unit" ]
+                        ]
+                , centered <| Grid.view identity grid
                 ]
-        , centered <| Grid.view identity grid
-        ]
 
 
 viewCell x y =
@@ -118,50 +130,77 @@ viewCell x y =
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg (Model m) =
-    case msg of
-        DeployUnit ->
+update msg model =
+    case ( msg, model ) of
+        ( GotServerMsg (Ok (Protocol.Welcome { yourClientId, unitInfo })), NeedWelcome ) ->
+            ( Ready
+                { currentUnit = Nothing
+                , units =
+                    unitInfo
+                        |> List.map
+                            (\{ x, y, name, id } ->
+                                ( ( id.clientId, id.localId )
+                                , { x = x, y = y, name = name }
+                                )
+                            )
+                        |> Dict.fromList
+                , nextUnit = { id = 0, name = "" }
+                , clientId = yourClientId
+                }
+            , Cmd.none
+            )
+
+        ( _, NeedWelcome ) ->
+            Debug.log "Unexpected message" ( NeedWelcome, Cmd.none )
+
+        ( DeployUnit, Ready m ) ->
             if m.nextUnit.name == "" then
-                ( Model m, Cmd.none )
+                ( model, Cmd.none )
 
             else
-                ( Model
+                let
+                    unitId =
+                        ( m.clientId, m.nextUnit.id )
+                in
+                ( Ready
                     { m
-                        | currentUnit = Just m.nextUnit.id
+                        | currentUnit =
+                            Just unitId
                         , units =
                             Dict.insert
-                                m.nextUnit.id
+                                unitId
                                 { x = 1, y = 1, name = m.nextUnit.name }
                                 m.units
                         , nextUnit =
-                            { id = m.nextUnit.id + 1
+                            { id =
+                                m.nextUnit.id + 1
                             , name = ""
                             }
                     }
                 , Cmd.none
                 )
 
-        SetUnitName name ->
+        ( SetUnitName name, Ready m ) ->
             let
                 unit =
                     m.nextUnit
             in
-            ( Model { m | nextUnit = { unit | name = name } }
+            ( Ready { m | nextUnit = { unit | name = name } }
             , Cmd.none
             )
 
-        ChooseUnit id ->
-            ( Model { m | currentUnit = Just id }
+        ( ChooseUnit id, Ready m ) ->
+            ( Ready { m | currentUnit = Just id }
             , Cmd.none
             )
 
-        ChooseSquare x y ->
+        ( ChooseSquare x y, Ready m ) ->
             case m.currentUnit of
                 Nothing ->
-                    ( Model m, Cmd.none )
+                    ( model, Cmd.none )
 
                 Just id ->
-                    ( Model
+                    ( Ready
                         { m
                             | currentUnit = Nothing
                             , units =
@@ -173,8 +212,8 @@ update msg (Model m) =
                     , Cmd.none
                     )
 
-        GotServerMsg result ->
-            Debug.log "result" ( Model m, Cmd.none )
+        ( GotServerMsg result, _ ) ->
+            Debug.log "result" ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
