@@ -2,10 +2,13 @@ module Main exposing (main)
 
 import Browser
 import Dict exposing (Dict)
+import File exposing (File)
+import File.Select
 import Grid
 import Html exposing (..)
 import Html.Attributes exposing (href, style)
 import Html.Events exposing (onClick, onInput)
+import Http
 import Protocol
 
 
@@ -45,6 +48,9 @@ type Msg
     | SetUnitName String
     | DeployUnit
     | GotServerMsg (Result Protocol.Error Protocol.ServerMsg)
+    | SelectedBgFile File
+    | UploadBgResult (Maybe Http.Error)
+    | RequestBgFile
 
 
 type alias Unit =
@@ -119,8 +125,11 @@ view model =
             div []
                 [ centered <|
                     div []
-                        [ input [ onInput SetUnitName ] []
-                        , button [ onClick DeployUnit ] [ text "Add Unit" ]
+                        [ div []
+                            [ input [ onInput SetUnitName ] []
+                            , button [ onClick DeployUnit ] [ text "Add Unit" ]
+                            ]
+                        , button [ onClick RequestBgFile ] [ text "Change Background" ]
                         ]
                 , centered <| Grid.view identity grid
                 ]
@@ -223,6 +232,30 @@ update msg model =
                                 }
                             }
                     )
+
+        ( RequestBgFile, _ ) ->
+            ( model
+            , File.Select.file [ "image/png" ] SelectedBgFile
+            )
+
+        ( SelectedBgFile file, _ ) ->
+            ( model
+            , Protocol.uploadBg file
+                (\res ->
+                    UploadBgResult <|
+                        case res of
+                            Ok () ->
+                                Nothing
+
+                            Err e ->
+                                Just e
+                )
+            )
+
+        ( UploadBgResult result, _ ) ->
+            Debug.log
+                ("upload result: " ++ Debug.toString result)
+                ( model, Cmd.none )
 
 
 applyServerMsg : Protocol.ServerMsg -> Model -> ( Model, Cmd Msg )

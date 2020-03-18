@@ -9,8 +9,11 @@ module Protocol exposing
     , disconnect
     , recv
     , send
+    , uploadBg
     )
 
+import File exposing (File)
+import Http
 import Json.Decode as D
 import Json.Encode as E
 import Ports
@@ -174,6 +177,15 @@ recv toMsg =
                     )
                 >> toMsg
             )
+
+
+uploadBg : File -> (Result Http.Error () -> msg) -> Cmd msg
+uploadBg file mkMsg =
+    Http.post
+        { url = "/new-bg"
+        , body = Http.fileBody file
+        , expect = Http.expectWhatever mkMsg
+        }
 
 
 send : ClientMsg -> Cmd msg
