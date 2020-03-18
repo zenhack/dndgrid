@@ -80,7 +80,7 @@ type Model
 unitGridItem : ( UnitID, Unit ) -> Grid.GridItem (Html Msg)
 unitGridItem ( id, { loc, name } ) =
     { item =
-        a [ href "#", onClick (ChooseUnit id) ] [ text name ]
+        centered <| a [ href "#", onClick (ChooseUnit id) ] [ text name ]
     , loc =
         { x = loc.x
         , y = loc.y
@@ -90,14 +90,30 @@ unitGridItem ( id, { loc, name } ) =
     }
 
 
-centered : Html msg -> Html msg
-centered item =
+centeredDir : String -> Html msg -> Html msg
+centeredDir dir item =
     div
         [ style "display" "flex"
+        , style "flex-direction" dir
         , style "align-items" "center"
         , style "justify-content" "space-around"
         ]
         [ item ]
+
+
+centeredX : Html msg -> Html msg
+centeredX =
+    centeredDir "row"
+
+
+centeredY : Html msg -> Html msg
+centeredY =
+    centeredDir "column"
+
+
+centered : Html msg -> Html msg
+centered =
+    centeredX >> centeredY
 
 
 init : {} -> ( Model, Cmd Msg )
@@ -128,15 +144,17 @@ view model =
                     }
             in
             div []
-                [ centered <|
+                [ centeredX <|
                     div []
-                        [ div []
-                            [ input [ onInput SetUnitName ] []
-                            , button [ onClick DeployUnit ] [ text "Add Unit" ]
-                            ]
-                        , button [ onClick RequestBgFile ] [ text "Change Background" ]
+                        [ centeredX <|
+                            div []
+                                [ input [ onInput SetUnitName ] []
+                                , button [ onClick DeployUnit ] [ text "Add Unit" ]
+                                ]
+                        , centeredX <|
+                            button [ onClick RequestBgFile ] [ text "Change Background" ]
                         ]
-                , centered <|
+                , centeredX <|
                     Grid.view identity
                         (Grid.merge (imgGrid m.bgImg) grid)
                 ]
