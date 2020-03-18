@@ -35,14 +35,19 @@ data LocalUnit
 
 -- Messages sent from the client to the server.
 data ClientMsg
-    = MoveUnit
-        { unitId :: !UnitId
-        , x      :: !Int
-        , y      :: !Int
-        }
+    = MoveUnit UnitMotion
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ClientMsg
 instance FromJSON ClientMsg
+
+data UnitMotion = UnitMotion
+    { unitId :: !UnitId
+    , x      :: !Int
+    , y      :: !Int
+    }
+    deriving(Show, Read, Eq, Ord, Generic)
+instance ToJSON UnitMotion
+instance FromJSON UnitMotion
 
 instance WebSocketsData (Maybe ClientMsg) where
     toLazyByteString (Just msg) = Aeson.encode msg
