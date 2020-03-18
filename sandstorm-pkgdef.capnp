@@ -238,7 +238,7 @@ const pkgdef :Spk.PackageDefinition = (
 
 const myCommand :Spk.Manifest.Command = (
   # Here we define the command used to start up your server.
-  argv = ["/sandstorm-http-bridge", "3000", "--", "/build/dndgrid"],
+  argv = ["/sandstorm-http-bridge", "3000", "--", "/start.sh"],
   environ = [
     (key = "BG_FILE_PATH", value = "/var/bg.png"),
     # Note that this defines the *entire* environment seen by your app.
