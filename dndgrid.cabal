@@ -45,7 +45,9 @@ common shared-opts
   build-depends:
       base ^>=4.13
     , aeson ^>=1.4.6
+    , async ^>=2.2.2
     , containers ^>=0.6.2
+    , safe-exceptions ^>=0.1.7
     , scotty ^>=0.11.5
     , stm ^>=2.5.0
     , text ^>=1.2.4
@@ -60,7 +62,8 @@ executable dndgrid
   import: shared-opts
   main-is: Main.hs
   other-modules:
-    Protocol
+      Protocol
+    , ServerLogic
   hs-source-dirs:      src/haskell
 test-suite tests
   import: shared-opts

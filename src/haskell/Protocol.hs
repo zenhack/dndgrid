@@ -2,6 +2,9 @@
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+-- This module defines the wire protocol spoken between clients
+-- and the server. It defines datatypes for messages, including
+-- serialization code.
 module Protocol
     ( ClientMsg(..)
     , ID(..)
@@ -30,6 +33,7 @@ newtype ID a = ID Int
 data Client
 data LocalUnit
 
+-- Messages sent from the client to the server.
 data ClientMsg
     = MoveUnit
         { unitId :: !UnitId
@@ -46,6 +50,7 @@ instance WebSocketsData (Maybe ClientMsg) where
     fromLazyByteString = Aeson.decode
     fromDataMessage = Aeson.decode . fromDataMessage
 
+-- messages sent from the server to the client.
 data ServerMsg
     = Welcome
         { yourClientId :: !(ID Client)
