@@ -1,1 +1,1 @@
-TODO: write README
+WIP: D&D battle grid app for Sandstorm.
