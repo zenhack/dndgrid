@@ -51,6 +51,8 @@ type Msg
     | SelectedBgFile File
     | UploadBgResult (Maybe Http.Error)
     | RequestBgFile
+    | SetGridWidth String
+    | SetGridHeight String
 
 
 type alias Unit =
@@ -61,17 +63,20 @@ type alias Unit =
 
 type Model
     = NeedWelcome
-    | Ready
-        { currentUnit : Maybe UnitID
-        , units : Dict UnitID Unit
-        , nextUnit :
-            { id : Int
-            , name : String
-            }
-        , clientId : Int
-        , bgImg : Int
-        , gridSize : Protocol.Point
+    | Ready ReadyModel
+
+
+type alias ReadyModel =
+    { currentUnit : Maybe UnitID
+    , units : Dict UnitID Unit
+    , nextUnit :
+        { id : Int
+        , name : String
         }
+    , clientId : Int
+    , bgImg : Int
+    , gridSize : Protocol.Point
+    }
 
 
 unitGridItem : ( UnitID, Unit ) -> Grid.GridItem (Html Msg)
@@ -143,14 +148,22 @@ view model =
             div []
                 [ centeredX <|
                     div []
-                        [ centeredX <|
-                            div []
+                        (List.map centeredX <|
+                            [ div []
                                 [ input [ onInput SetUnitName ] []
                                 , button [ onClick DeployUnit ] [ text "Add Unit" ]
                                 ]
-                        , centeredX <|
-                            button [ onClick RequestBgFile ] [ text "Change Background" ]
-                        ]
+                            , button [ onClick RequestBgFile ] [ text "Change Background" ]
+                            , div []
+                                [ label [] [ text "Grid height" ]
+                                , input [ onInput SetGridHeight ] []
+                                ]
+                            , div []
+                                [ label [] [ text "Grid width" ]
+                                , input [ onInput SetGridWidth ] []
+                                ]
+                            ]
+                        )
                 , centeredX <|
                     Grid.view identity
                         (Grid.merge (imgGrid m.gridSize m.bgImg) grid)
@@ -201,6 +214,31 @@ viewCell x y =
             []
 
 
+setGridSize :
+    String
+    -> ReadyModel
+    -> (Int -> Protocol.Point -> Protocol.Point)
+    -> ( Model, Cmd Msg )
+setGridSize str m updateSize =
+    case String.toInt str of
+        Nothing ->
+            ( Ready m, Cmd.none )
+
+        Just n ->
+            if n < 1 then
+                ( Ready m, Cmd.none )
+
+            else
+                let
+                    newSize =
+                        updateSize n m.gridSize
+                in
+                ( Ready { m | gridSize = newSize }
+                , Protocol.send <|
+                    Protocol.SetGridSize newSize
+                )
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model ) of
@@ -212,6 +250,12 @@ update msg model =
 
         ( _, NeedWelcome ) ->
             Debug.log "unexpected non-server msg" ( model, Cmd.none )
+
+        ( SetGridWidth str, Ready m ) ->
+            setGridSize str m (\x sz -> { sz | x = x })
+
+        ( SetGridHeight str, Ready m ) ->
+            setGridSize str m (\y sz -> { sz | y = y })
 
         ( DeployUnit, Ready m ) ->
             if m.nextUnit.name == "" then
@@ -340,6 +384,11 @@ applyServerMsg msg model =
 
         ( Protocol.RefreshBg bg, Ready m ) ->
             ( Ready { m | bgImg = bg }
+            , Cmd.none
+            )
+
+        ( Protocol.GridSizeChanged sz, Ready m ) ->
+            ( Ready { m | gridSize = sz }
             , Cmd.none
             )
 

@@ -51,10 +51,7 @@ handleClient server@(Server stateVar) clientConn = do
             }
         writeTChan clientChan P.Welcome
             { P.bgImg = bgCount st
-            , P.gridSize = P.Point
-                { x = 10
-                , y = 10
-                }
+            , P.gridSize = size (grid st)
             , P.yourClientId = clientId
             , P.unitInfo = M.elems $ units $ grid st
             }
@@ -85,6 +82,10 @@ handleClientMsg server@(Server stateVar) clientId clientChan msg =
             modifyTVar' stateVar $
                 alterUnit id $ \_ -> Just unitInfo
             broadcast server (P.UnitAdded unitInfo)
+        P.SetGridSize size -> do
+            modifyTVar' stateVar $
+                \st@ServerState{grid} -> st { grid = grid { size } }
+            broadcast server $ P.GridSizeChanged size
 
 alterUnit :: P.UnitId -> (Maybe P.UnitInfo -> Maybe P.UnitInfo) -> ServerState -> ServerState
 alterUnit id f st@ServerState{grid = g@GridState{units}} =
@@ -99,6 +100,7 @@ newtype Server = Server (TVar ServerState)
 
 data GridState = GridState
     { units :: M.Map P.UnitId P.UnitInfo
+    , size  :: P.Point
     }
 
 data ServerState = ServerState
@@ -118,7 +120,13 @@ newServer :: IO Server
 newServer = atomically $ do
     ch <- newBroadcastTChan
     Server <$> newTVar ServerState
-        { grid = GridState { units = M.empty }
+        { grid = GridState
+            { units = M.empty
+            , size = P.Point
+                { x = 10
+                , y = 10
+                }
+            }
         , bgCount = 0
         , nextClientId = 0
         , clients = M.empty

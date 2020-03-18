@@ -48,6 +48,7 @@ data ClientMsg
         , name    :: LT.Text
         , loc     :: Point
         }
+    | SetGridSize Point
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ClientMsg
 instance FromJSON ClientMsg
@@ -77,6 +78,7 @@ data ServerMsg
     | UnitMoved UnitMotion
     | UnitAdded UnitInfo
     | RefreshBg !Int
+    | GridSizeChanged Point
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ServerMsg
 instance FromJSON ServerMsg

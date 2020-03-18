@@ -39,6 +39,7 @@ type ClientMsg
         , name : String
         , loc : Point
         }
+    | SetGridSize Point
 
 
 type alias UnitMotion =
@@ -52,6 +53,7 @@ type ServerMsg
     | UnitMoved UnitMotion
     | UnitAdded UnitInfo
     | RefreshBg Int
+    | GridSizeChanged Point
 
 
 type alias WelcomeMsg =
@@ -89,6 +91,12 @@ encodeClientMsg msg =
                 , ( "localId", E.int localId )
                 , ( "name", E.string name )
                 , ( "loc", encodePoint loc )
+                ]
+
+        SetGridSize sz ->
+            E.object
+                [ ( "tag", E.string "SetGridSize" )
+                , ( "contents", encodePoint sz )
                 ]
 
 
@@ -136,6 +144,9 @@ decodeServerMsg =
 
                     "RefreshBg" ->
                         D.map RefreshBg (D.field "contents" D.int)
+
+                    "GridSizeChanged" ->
+                        D.map GridSizeChanged (D.field "contents" decodePoint)
 
                     _ ->
                         D.fail <| "unknown tag: " ++ tag
