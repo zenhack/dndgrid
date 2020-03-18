@@ -16,6 +16,10 @@ gridSize =
     10
 
 
+cellSizePx =
+    96
+
+
 {-| A globally unique identifier for a unit.
 
 Ideally the type would be:
@@ -140,6 +144,10 @@ view model =
 
 imgGrid : Int -> Grid.Grid (Html Msg)
 imgGrid bgImg =
+    let
+        size =
+            String.fromInt (gridSize * cellSizePx) ++ "px"
+    in
     { rows = gridSize
     , cols = gridSize
     , items =
@@ -147,6 +155,8 @@ imgGrid bgImg =
                 img
                     [ src <| "/bg/" ++ String.fromInt bgImg ++ "/bg.png"
                     , style "z-index" "-1"
+                    , style "width" size
+                    , style "height" size
                     ]
                     []
           , loc =
@@ -161,12 +171,16 @@ imgGrid bgImg =
 
 
 viewCell x y =
+    let
+        size =
+            String.fromInt cellSizePx ++ "px"
+    in
     Just <|
         div
             [ style "border" "solid black 1px"
             , style "margin" "0px"
-            , style "height" "96px"
-            , style "width" "96px"
+            , style "height" size
+            , style "width" size
             , onClick (ChooseSquare { x = x, y = y })
             ]
             []
