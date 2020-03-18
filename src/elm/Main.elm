@@ -10,6 +10,8 @@ import Html.Attributes exposing (href, src, style)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Protocol
+import Svg exposing (svg)
+import Svg.Attributes exposing (height, viewBox, width)
 
 
 cellSizePx =
@@ -82,7 +84,13 @@ type alias ReadyModel =
 unitGridItem : ( UnitID, Unit ) -> Grid.GridItem (Html Msg)
 unitGridItem ( id, { loc, name } ) =
     { item =
-        centered <| a [ href "#", onClick (ChooseUnit id) ] [ text name ]
+        centered <|
+            a
+                [ href "#"
+                , onClick (ChooseUnit id)
+                , style "z-index" "1"
+                ]
+                [ text name ]
     , loc =
         { x = loc.x
         , y = loc.y
@@ -209,9 +217,9 @@ viewCell x y =
             , style "margin" "0px"
             , style "height" size
             , style "width" size
-            , onClick (ChooseSquare { x = x, y = y })
             ]
-            []
+            [ transparentButton 0 (ChooseSquare { x = x, y = y })
+            ]
 
 
 setGridSize :
@@ -419,6 +427,37 @@ applyServerMsg msg model =
                 }
             , Cmd.none
             )
+
+
+{-| Render a transparent svg. This is so we can click on grid cells;
+some browsers (chromium) do not recognize onClick events for div
+tags.
+-}
+transparentButton : Int -> msg -> Html msg
+transparentButton zIndex msg =
+    let
+        cellSize =
+            String.fromInt cellSizePx
+    in
+    -- TODO: aria role? I really don't like where this
+    -- app is in terms of a11y in general, but given
+    -- the whole point is to be a *grid* I'm not sure
+    -- how to go about making this useful for folks
+    -- who can't see it...
+    a
+        [ href "#"
+        , onClick msg
+        , style "z-index" <| String.fromInt zIndex
+        , style "height" "100%"
+        , style "width" "100%"
+        ]
+        [ svg
+            [ width cellSize
+            , height cellSize
+            , viewBox <| "0 0 " ++ cellSize ++ " " ++ cellSize
+            ]
+            []
+        ]
 
 
 subscriptions : Model -> Sub Msg
