@@ -1,6 +1,8 @@
 -- This module implements the high-level "business logic" of the protocol;
 -- It does not concern itself with HTTP, serialization, etc, and just specifies
 -- communication patterns in terms of STM, channels...
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 module ServerLogic
     ( Server
     , ClientConn(..)
@@ -61,6 +63,12 @@ handleClientMsg
 handleClientMsg stateVar clientId clientChan msg =
     case msg of
         P.MoveUnit{} -> error "TODO"
+        P.AddUnit{x, y, name, localId} -> do
+            st@ServerState{grid = g@GridState{units}} <- readTVar stateVar
+            let id = P.UnitId {clientId, localId}
+            let g' = g { units = M.insert id P.UnitInfo { id, x, y, name } units }
+            writeTVar stateVar st { grid = g' }
+            -- TODO: broadcast the addition to clients.
 
 newtype Server = Server (TVar ServerState)
 

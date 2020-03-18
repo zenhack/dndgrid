@@ -28,6 +28,12 @@ type ClientMsg
         , x : Int
         , y : Int
         }
+    | AddUnit
+        { localId : Int
+        , name : String
+        , x : Int
+        , y : Int
+        }
 
 
 type ServerMsg
@@ -55,7 +61,17 @@ encodeClientMsg msg =
     case msg of
         MoveUnit { unitId, x, y } ->
             E.object
-                [ ( "unitId", encodeUnitId unitId )
+                [ ( "tag", E.string "MoveUnit" )
+                , ( "unitId", encodeUnitId unitId )
+                , ( "x", E.int x )
+                , ( "y", E.int y )
+                ]
+
+        AddUnit { localId, name, x, y } ->
+            E.object
+                [ ( "tag", E.string "AddUnit" )
+                , ( "localId", E.int localId )
+                , ( "name", E.string name )
                 , ( "x", E.int x )
                 , ( "y", E.int y )
                 ]

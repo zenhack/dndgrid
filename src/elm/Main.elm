@@ -177,7 +177,15 @@ update msg model =
                             , name = ""
                             }
                     }
-                , Cmd.none
+                , Protocol.send <|
+                    Protocol.AddUnit
+                        { localId = m.nextUnit.id
+                        , name = m.nextUnit.name
+
+                        -- TODO: factor out the position.
+                        , x = 1
+                        , y = 1
+                        }
                 )
 
         ( SetUnitName name, Ready m ) ->

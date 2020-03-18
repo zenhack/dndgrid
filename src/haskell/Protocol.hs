@@ -36,6 +36,12 @@ data LocalUnit
 -- Messages sent from the client to the server.
 data ClientMsg
     = MoveUnit UnitMotion
+    | AddUnit
+        { localId :: !(ID LocalUnit)
+        , name    :: LT.Text
+        , x       :: !Int
+        , y       :: !Int
+        }
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ClientMsg
 instance FromJSON ClientMsg
