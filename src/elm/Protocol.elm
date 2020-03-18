@@ -23,17 +23,20 @@ type alias UnitId =
 
 
 type ClientMsg
-    = MoveUnit
-        { unitId : UnitId
-        , x : Int
-        , y : Int
-        }
+    = MoveUnit UnitMotion
     | AddUnit
         { localId : Int
         , name : String
         , x : Int
         , y : Int
         }
+
+
+type alias UnitMotion =
+    { unitId : UnitId
+    , x : Int
+    , y : Int
+    }
 
 
 type ServerMsg
@@ -59,12 +62,10 @@ type Error
 encodeClientMsg : ClientMsg -> E.Value
 encodeClientMsg msg =
     case msg of
-        MoveUnit { unitId, x, y } ->
+        MoveUnit motion ->
             E.object
                 [ ( "tag", E.string "MoveUnit" )
-                , ( "unitId", encodeUnitId unitId )
-                , ( "x", E.int x )
-                , ( "y", E.int y )
+                , ( "contents", encodeUnitMotion motion )
                 ]
 
         AddUnit { localId, name, x, y } ->
@@ -75,6 +76,14 @@ encodeClientMsg msg =
                 , ( "x", E.int x )
                 , ( "y", E.int y )
                 ]
+
+
+encodeUnitMotion { unitId, x, y } =
+    E.object
+        [ ( "unitId", encodeUnitId unitId )
+        , ( "x", E.int x )
+        , ( "y", E.int y )
+        ]
 
 
 encodeUnitId : UnitId -> E.Value

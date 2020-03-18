@@ -11,6 +11,7 @@ module Protocol
     , ServerMsg(..)
     , Client(..)
     , LocalUnit(..)
+    , UnitMotion(..)
     , UnitId(..)
     , UnitInfo(..)
     ) where

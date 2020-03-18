@@ -62,13 +62,18 @@ handleClientMsg
     -> STM ()
 handleClientMsg stateVar clientId clientChan msg =
     case msg of
-        P.MoveUnit{} -> error "TODO"
+        P.MoveUnit P.UnitMotion{unitId, x, y} ->
+            modifyTVar' stateVar $
+                alterUnit unitId $ fmap $ \unit -> (unit {P.x = x, P.y = y} :: P.UnitInfo)
         P.AddUnit{x, y, name, localId} -> do
-            st@ServerState{grid = g@GridState{units}} <- readTVar stateVar
             let id = P.UnitId {clientId, localId}
-            let g' = g { units = M.insert id P.UnitInfo { id, x, y, name } units }
-            writeTVar stateVar st { grid = g' }
+            modifyTVar' stateVar $
+                alterUnit id $ \_ -> Just P.UnitInfo { id, x, y, name }
             -- TODO: broadcast the addition to clients.
+
+alterUnit :: P.UnitId -> (Maybe P.UnitInfo -> Maybe P.UnitInfo) -> ServerState -> ServerState
+alterUnit id f st@ServerState{grid = g@GridState{units}} =
+    st { grid = g { units = M.alter f id units } }
 
 newtype Server = Server (TVar ServerState)
 
