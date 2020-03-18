@@ -68,9 +68,10 @@ handleClientMsg server@(Server stateVar) clientId clientChan msg =
             broadcast server (P.UnitMoved motion)
         P.AddUnit{loc, name, localId} -> do
             let id = P.UnitId {clientId, localId}
+            let unitInfo = P.UnitInfo { id, loc, name }
             modifyTVar' stateVar $
-                alterUnit id $ \_ -> Just P.UnitInfo { id, loc, name }
-            -- TODO: broadcast the addition to clients.
+                alterUnit id $ \_ -> Just unitInfo
+            broadcast server (P.UnitAdded unitInfo)
 
 alterUnit :: P.UnitId -> (Maybe P.UnitInfo -> Maybe P.UnitInfo) -> ServerState -> ServerState
 alterUnit id f st@ServerState{grid = g@GridState{units}} =

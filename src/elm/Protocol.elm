@@ -50,6 +50,7 @@ type ServerMsg
         , unitInfo : List UnitInfo
         }
     | UnitMoved UnitMotion
+    | UnitAdded UnitInfo
 
 
 type alias UnitInfo =
@@ -117,6 +118,9 @@ decodeServerMsg =
 
                     "UnitMoved" ->
                         D.map UnitMoved (D.field "contents" decodeUnitMotion)
+
+                    "UnitAdded" ->
+                        D.map UnitAdded (D.field "contents" decodeUnitInfo)
 
                     _ ->
                         D.fail <| "unknown tag: " ++ tag

@@ -72,6 +72,7 @@ data ServerMsg
         , unitInfo     :: [UnitInfo]
         }
     | UnitMoved UnitMotion
+    | UnitAdded UnitInfo
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ServerMsg
 instance FromJSON ServerMsg

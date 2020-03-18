@@ -29,6 +29,16 @@ type alias UnitID =
     ( Int, Int )
 
 
+unitIdFromProtocol : Protocol.UnitId -> UnitID
+unitIdFromProtocol { clientId, localId } =
+    ( clientId, localId )
+
+
+unitIdToProtocol : UnitID -> Protocol.UnitId
+unitIdToProtocol ( clientId, localId ) =
+    { clientId = clientId, localId = localId }
+
+
 type Msg
     = ChooseUnit UnitID
     | ChooseSquare Protocol.Point
@@ -131,42 +141,14 @@ viewCell x y =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model ) of
-        ( GotServerMsg (Ok (Protocol.Welcome { yourClientId, unitInfo })), NeedWelcome ) ->
-            ( Ready
-                { currentUnit = Nothing
-                , units =
-                    unitInfo
-                        |> List.map
-                            (\{ loc, name, id } ->
-                                ( ( id.clientId, id.localId )
-                                , { loc = loc, name = name }
-                                )
-                            )
-                        |> Dict.fromList
-                , nextUnit = { id = 0, name = "" }
-                , clientId = yourClientId
-                }
-            , Cmd.none
-            )
+        ( GotServerMsg (Ok serverMsg), _ ) ->
+            applyServerMsg serverMsg model
+
+        ( GotServerMsg (Err err), _ ) ->
+            Debug.log "server error" ( model, Cmd.none )
 
         ( _, NeedWelcome ) ->
-            Debug.log "Unexpected message" ( NeedWelcome, Cmd.none )
-
-        ( GotServerMsg (Ok (Protocol.UnitMoved { unitId, loc })), Ready m ) ->
-            let
-                key =
-                    ( unitId.clientId, unitId.localId )
-            in
-            ( Ready
-                { m
-                    | units =
-                        Dict.update
-                            key
-                            (Maybe.map (\u -> { u | loc = loc }))
-                            m.units
-                }
-            , Cmd.none
-            )
+            Debug.log "unexpected non-server msg" ( model, Cmd.none )
 
         ( DeployUnit, Ready m ) ->
             if m.nextUnit.name == "" then
@@ -242,8 +224,58 @@ update msg model =
                             }
                     )
 
-        ( GotServerMsg result, _ ) ->
-            Debug.log "result" ( model, Cmd.none )
+
+applyServerMsg : Protocol.ServerMsg -> Model -> ( Model, Cmd Msg )
+applyServerMsg msg model =
+    case ( msg, model ) of
+        ( Protocol.Welcome { yourClientId, unitInfo }, _ ) ->
+            ( Ready
+                { currentUnit = Nothing
+                , units =
+                    unitInfo
+                        |> List.map
+                            (\{ loc, name, id } ->
+                                ( ( id.clientId, id.localId )
+                                , { loc = loc, name = name }
+                                )
+                            )
+                        |> Dict.fromList
+                , nextUnit = { id = 0, name = "" }
+                , clientId = yourClientId
+                }
+            , Cmd.none
+            )
+
+        ( _, NeedWelcome ) ->
+            Debug.log "Unexpected message" ( NeedWelcome, Cmd.none )
+
+        ( Protocol.UnitMoved { unitId, loc }, Ready m ) ->
+            let
+                key =
+                    ( unitId.clientId, unitId.localId )
+            in
+            ( Ready
+                { m
+                    | units =
+                        Dict.update
+                            key
+                            (Maybe.map (\u -> { u | loc = loc }))
+                            m.units
+                }
+            , Cmd.none
+            )
+
+        ( Protocol.UnitAdded { id, loc, name }, Ready m ) ->
+            ( Ready
+                { m
+                    | units =
+                        Dict.update
+                            (unitIdFromProtocol id)
+                            (\_ -> Just { loc = loc, name = name })
+                            m.units
+                }
+            , Cmd.none
+            )
 
 
 subscriptions : Model -> Sub Msg
