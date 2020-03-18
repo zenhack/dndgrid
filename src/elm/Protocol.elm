@@ -1,6 +1,7 @@
 module Protocol exposing
     ( ClientMsg(..)
     , Error(..)
+    , Point
     , ServerMsg(..)
     , UnitId
     , UnitInfo
@@ -16,6 +17,12 @@ import Ports
 import WebSocket
 
 
+type alias Point =
+    { x : Int
+    , y : Int
+    }
+
+
 type alias UnitId =
     { clientId : Int
     , localId : Int
@@ -27,15 +34,13 @@ type ClientMsg
     | AddUnit
         { localId : Int
         , name : String
-        , x : Int
-        , y : Int
+        , loc : Point
         }
 
 
 type alias UnitMotion =
     { unitId : UnitId
-    , x : Int
-    , y : Int
+    , loc : Point
     }
 
 
@@ -48,10 +53,9 @@ type ServerMsg
 
 
 type alias UnitInfo =
-    { x : Int
-    , y : Int
-    , id : UnitId
+    { id : UnitId
     , name : String
+    , loc : Point
     }
 
 
@@ -69,30 +73,27 @@ encodeClientMsg msg =
                 , ( "contents", encodeUnitMotion motion )
                 ]
 
-        AddUnit { localId, name, x, y } ->
+        AddUnit { localId, name, loc } ->
             E.object
                 [ ( "tag", E.string "AddUnit" )
                 , ( "localId", E.int localId )
                 , ( "name", E.string name )
-                , ( "x", E.int x )
-                , ( "y", E.int y )
+                , ( "loc", encodePoint loc )
                 ]
 
 
-encodeUnitMotion { unitId, x, y } =
+encodeUnitMotion { unitId, loc } =
     E.object
         [ ( "unitId", encodeUnitId unitId )
-        , ( "x", E.int x )
-        , ( "y", E.int y )
+        , ( "loc", encodePoint loc )
         ]
 
 
 decodeUnitMotion : D.Decoder UnitMotion
 decodeUnitMotion =
-    D.map3 UnitMotion
+    D.map2 UnitMotion
         (D.field "unitId" decodeUnitId)
-        (D.field "x" D.int)
-        (D.field "y" D.int)
+        (D.field "loc" decodePoint)
 
 
 encodeUnitId : UnitId -> E.Value
@@ -124,11 +125,25 @@ decodeServerMsg =
 
 decodeUnitInfo : D.Decoder UnitInfo
 decodeUnitInfo =
-    D.map4 UnitInfo
-        (D.field "x" D.int)
-        (D.field "y" D.int)
+    D.map3 UnitInfo
         (D.field "id" decodeUnitId)
         (D.field "name" D.string)
+        (D.field "loc" decodePoint)
+
+
+decodePoint : D.Decoder Point
+decodePoint =
+    D.map2 Point
+        (D.field "x" D.int)
+        (D.field "y" D.int)
+
+
+encodePoint : Point -> E.Value
+encodePoint { x, y } =
+    E.object
+        [ ( "x", E.int x )
+        , ( "y", E.int y )
+        ]
 
 
 decodeUnitId : D.Decoder UnitId

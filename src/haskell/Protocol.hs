@@ -34,14 +34,18 @@ newtype ID a = ID Int
 data Client
 data LocalUnit
 
+data Point = Point { x :: !Int, y :: !Int }
+    deriving(Show, Read, Eq, Ord, Generic)
+instance ToJSON Point
+instance FromJSON Point
+
 -- Messages sent from the client to the server.
 data ClientMsg
     = MoveUnit UnitMotion
     | AddUnit
         { localId :: !(ID LocalUnit)
         , name    :: LT.Text
-        , x       :: !Int
-        , y       :: !Int
+        , loc     :: Point
         }
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ClientMsg
@@ -49,8 +53,7 @@ instance FromJSON ClientMsg
 
 data UnitMotion = UnitMotion
     { unitId :: !UnitId
-    , x      :: !Int
-    , y      :: !Int
+    , loc    :: Point
     }
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON UnitMotion
@@ -80,8 +83,7 @@ instance WebSocketsData (Maybe ServerMsg) where
     fromDataMessage = Aeson.decode . fromDataMessage
 
 data UnitInfo = UnitInfo
-    { x    :: !Int
-    , y    :: !Int
+    { loc  :: Point
     , id   :: UnitId
     , name :: LT.Text
     }

@@ -31,15 +31,14 @@ type alias UnitID =
 
 type Msg
     = ChooseUnit UnitID
-    | ChooseSquare Int Int
+    | ChooseSquare Protocol.Point
     | SetUnitName String
     | DeployUnit
     | GotServerMsg (Result Protocol.Error Protocol.ServerMsg)
 
 
 type alias Unit =
-    { x : Int
-    , y : Int
+    { loc : Protocol.Point
     , name : String
     }
 
@@ -58,12 +57,12 @@ type Model
 
 
 unitGridItem : ( UnitID, Unit ) -> Grid.GridItem (Html Msg)
-unitGridItem ( id, { x, y, name } ) =
+unitGridItem ( id, { loc, name } ) =
     { item =
         a [ href "#", onClick (ChooseUnit id) ] [ text name ]
     , loc =
-        { x = x
-        , y = y
+        { x = loc.x
+        , y = loc.y
         , w = 1
         , h = 1
         }
@@ -124,7 +123,7 @@ viewCell x y =
             , style "margin" "0px"
             , style "height" "96px"
             , style "width" "96px"
-            , onClick (ChooseSquare x y)
+            , onClick (ChooseSquare { x = x, y = y })
             ]
             []
 
@@ -138,9 +137,9 @@ update msg model =
                 , units =
                     unitInfo
                         |> List.map
-                            (\{ x, y, name, id } ->
+                            (\{ loc, name, id } ->
                                 ( ( id.clientId, id.localId )
-                                , { x = x, y = y, name = name }
+                                , { loc = loc, name = name }
                                 )
                             )
                         |> Dict.fromList
@@ -153,7 +152,7 @@ update msg model =
         ( _, NeedWelcome ) ->
             Debug.log "Unexpected message" ( NeedWelcome, Cmd.none )
 
-        ( GotServerMsg (Ok (Protocol.UnitMoved { unitId, x, y })), Ready m ) ->
+        ( GotServerMsg (Ok (Protocol.UnitMoved { unitId, loc })), Ready m ) ->
             let
                 key =
                     ( unitId.clientId, unitId.localId )
@@ -163,7 +162,7 @@ update msg model =
                     | units =
                         Dict.update
                             key
-                            (Maybe.map (\u -> { u | x = x, y = y }))
+                            (Maybe.map (\u -> { u | loc = loc }))
                             m.units
                 }
             , Cmd.none
@@ -177,6 +176,9 @@ update msg model =
                 let
                     unitId =
                         ( m.clientId, m.nextUnit.id )
+
+                    loc =
+                        { x = 1, y = 1 }
                 in
                 ( Ready
                     { m
@@ -185,7 +187,7 @@ update msg model =
                         , units =
                             Dict.insert
                                 unitId
-                                { x = 1, y = 1, name = m.nextUnit.name }
+                                { loc = loc, name = m.nextUnit.name }
                                 m.units
                         , nextUnit =
                             { id =
@@ -197,10 +199,7 @@ update msg model =
                     Protocol.AddUnit
                         { localId = m.nextUnit.id
                         , name = m.nextUnit.name
-
-                        -- TODO: factor out the position.
-                        , x = 1
-                        , y = 1
+                        , loc = loc
                         }
                 )
 
@@ -218,7 +217,7 @@ update msg model =
             , Cmd.none
             )
 
-        ( ChooseSquare x y, Ready m ) ->
+        ( ChooseSquare loc, Ready m ) ->
             case m.currentUnit of
                 Nothing ->
                     ( model, Cmd.none )
@@ -230,13 +229,12 @@ update msg model =
                             , units =
                                 Dict.update
                                     id
-                                    (Maybe.map (\u -> { u | x = x, y = y }))
+                                    (Maybe.map (\u -> { u | loc = loc }))
                                     m.units
                         }
                     , Protocol.send <|
                         Protocol.MoveUnit
-                            { x = x
-                            , y = y
+                            { loc = loc
                             , unitId =
                                 { clientId = clientId
                                 , localId = localId

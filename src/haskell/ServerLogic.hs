@@ -62,14 +62,14 @@ handleClientMsg
     -> STM ()
 handleClientMsg server@(Server stateVar) clientId clientChan msg =
     case msg of
-        P.MoveUnit motion@P.UnitMotion{unitId, x, y} -> do
+        P.MoveUnit motion@P.UnitMotion{unitId, loc} -> do
             modifyTVar' stateVar $
-                alterUnit unitId $ fmap $ \unit -> (unit {P.x = x, P.y = y} :: P.UnitInfo)
+                alterUnit unitId $ fmap $ \unit -> (unit {P.loc = loc} :: P.UnitInfo)
             broadcast server (P.UnitMoved motion)
-        P.AddUnit{x, y, name, localId} -> do
+        P.AddUnit{loc, name, localId} -> do
             let id = P.UnitId {clientId, localId}
             modifyTVar' stateVar $
-                alterUnit id $ \_ -> Just P.UnitInfo { id, x, y, name }
+                alterUnit id $ \_ -> Just P.UnitInfo { id, loc, name }
             -- TODO: broadcast the addition to clients.
 
 alterUnit :: P.UnitId -> (Maybe P.UnitInfo -> Maybe P.UnitInfo) -> ServerState -> ServerState
