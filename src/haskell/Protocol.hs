@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Protocol
@@ -30,6 +31,20 @@ data Client
 data LocalUnit
 
 data ClientMsg
+    = MoveUnit
+        { unitId :: !UnitId
+        , x      :: !Int
+        , y      :: !Int
+        }
+    deriving(Show, Read, Eq, Ord, Generic)
+instance ToJSON ClientMsg
+instance FromJSON ClientMsg
+
+instance WebSocketsData (Maybe ClientMsg) where
+    toLazyByteString (Just msg) = Aeson.encode msg
+    toLazyByteString Nothing    = Aeson.encode Aeson.Null
+    fromLazyByteString = Aeson.decode
+    fromDataMessage = Aeson.decode . fromDataMessage
 
 data ServerMsg
     = Welcome

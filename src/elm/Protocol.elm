@@ -23,7 +23,11 @@ type alias UnitId =
 
 
 type ClientMsg
-    = ClientMsg
+    = MoveUnit
+        { unitId : UnitId
+        , x : Int
+        , y : Int
+        }
 
 
 type ServerMsg
@@ -47,8 +51,22 @@ type Error
 
 
 encodeClientMsg : ClientMsg -> E.Value
-encodeClientMsg =
-    Debug.todo "encodeClientMsg"
+encodeClientMsg msg =
+    case msg of
+        MoveUnit { unitId, x, y } ->
+            E.object
+                [ ( "unitId", encodeUnitId unitId )
+                , ( "x", E.int x )
+                , ( "y", E.int y )
+                ]
+
+
+encodeUnitId : UnitId -> E.Value
+encodeUnitId { clientId, localId } =
+    E.object
+        [ ( "clientId", E.int clientId )
+        , ( "localId", E.int localId )
+        ]
 
 
 decodeServerMsg : D.Decoder ServerMsg
