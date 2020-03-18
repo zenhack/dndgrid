@@ -19,14 +19,17 @@ import qualified Protocol        as P
 
 handleClient :: Server -> ClientConn -> IO ()
 handleClient (Server stateVar) clientConn = do
-    ch <- newTChanIO
+    myChan <- newTChanIO
+    pubChan <- atomically $ do
+        st <- readTVar stateVar
+        dupTChan $ broadcastChan st
     race_
         (bracket
-            (setupClient ch)
+            (setupClient myChan)
             teardownClient
-            (useClient ch))
+            (useClient myChan))
         (forever $ do
-            msg <- atomically $ readTChan ch
+            msg <- atomically $ readTChan myChan `orElse` readTChan pubChan
             sendMsg clientConn msg)
   where
     useClient clientChan clientId = forever $ do
@@ -66,9 +69,10 @@ data GridState = GridState
     }
 
 data ServerState = ServerState
-    { grid         :: GridState
-    , nextClientId :: !(P.ID P.Client)
-    , clients      :: M.Map (P.ID P.Client) (TChan P.ServerMsg)
+    { grid          :: GridState
+    , nextClientId  :: !(P.ID P.Client)
+    , clients       :: M.Map (P.ID P.Client) (TChan P.ServerMsg)
+    , broadcastChan :: TChan P.ServerMsg
     }
 
 data ClientConn = ClientConn
@@ -77,11 +81,11 @@ data ClientConn = ClientConn
     }
 
 newServer :: IO Server
-newServer = Server <$> newTVarIO initialServerState
-
-initialServerState :: ServerState
-initialServerState = ServerState
-    { grid = GridState { units = M.empty }
-    , nextClientId = 0
-    , clients = M.empty
-    }
+newServer = atomically $ do
+    ch <- newBroadcastTChan
+    Server <$> newTVar ServerState
+        { grid = GridState { units = M.empty }
+        , nextClientId = 0
+        , clients = M.empty
+        , broadcastChan = ch
+        }
