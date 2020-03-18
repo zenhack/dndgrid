@@ -199,7 +199,7 @@ update msg model =
                 Nothing ->
                     ( model, Cmd.none )
 
-                Just id ->
+                Just (( clientId, localId ) as id) ->
                     ( Ready
                         { m
                             | currentUnit = Nothing
@@ -209,7 +209,15 @@ update msg model =
                                     (Maybe.map (\u -> { u | x = x, y = y }))
                                     m.units
                         }
-                    , Cmd.none
+                    , Protocol.send <|
+                        Protocol.MoveUnit
+                            { x = x
+                            , y = y
+                            , unitId =
+                                { clientId = clientId
+                                , localId = localId
+                                }
+                            }
                     )
 
         ( GotServerMsg result, _ ) ->
