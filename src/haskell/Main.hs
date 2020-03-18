@@ -34,6 +34,7 @@ makeScottyApp bgPath server = Sc.scottyApp $ do
     Sc.post "/new-bg" $ do
         bytes <- Sc.body
         liftIO $ withBinaryFile bgPath WriteMode $ \handle ->
+            -- TODO: atomic rename.
             LBS.hPut handle bytes
         liftIO $ refreshBg server
     Sc.get "/bg/:junk/bg.png" $ do
