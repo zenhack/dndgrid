@@ -43,7 +43,9 @@ makeScottyApp bgPath server = Sc.scottyApp $ do
 
 wsApp :: Server -> Ws.ServerApp
 wsApp server pending = do
-    conn <- Ws.acceptRequest pending
+    conn <- Ws.acceptRequestWith
+        pending
+        Ws.defaultAcceptRequest { Ws.acceptSubprotocol = Just "dndgrid" }
     Ws.withPingThread conn 30 (pure ()) $
         handleClient server ClientConn
             { sendMsg = Ws.sendTextData conn . Just

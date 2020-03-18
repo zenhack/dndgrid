@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
           throw("Not running over http; can't infer websocket scheme.");
       }
       const addr = scheme + "://" + window.location.host;
-      const socket = new WebSocket(addr, 'whateverproto');
+      const socket = new WebSocket(addr, 'dndgrid');
       socket.onmessage = function (event) {
         app.ports.receiveSocketMsg.send({ name : wat.name
                                         , msg : "data"
