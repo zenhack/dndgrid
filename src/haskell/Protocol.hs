@@ -68,6 +68,7 @@ data ServerMsg
         { yourClientId :: !(ID Client)
         , unitInfo     :: [UnitInfo]
         }
+    | UnitMoved UnitMotion
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ServerMsg
 instance FromJSON ServerMsg

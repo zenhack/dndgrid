@@ -153,6 +153,22 @@ update msg model =
         ( _, NeedWelcome ) ->
             Debug.log "Unexpected message" ( NeedWelcome, Cmd.none )
 
+        ( GotServerMsg (Ok (Protocol.UnitMoved { unitId, x, y })), Ready m ) ->
+            let
+                key =
+                    ( unitId.clientId, unitId.localId )
+            in
+            ( Ready
+                { m
+                    | units =
+                        Dict.update
+                            key
+                            (Maybe.map (\u -> { u | x = x, y = y }))
+                            m.units
+                }
+            , Cmd.none
+            )
+
         ( DeployUnit, Ready m ) ->
             if m.nextUnit.name == "" then
                 ( model, Cmd.none )

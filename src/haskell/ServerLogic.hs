@@ -20,7 +20,7 @@ import qualified Data.Map.Strict as M
 import qualified Protocol        as P
 
 handleClient :: Server -> ClientConn -> IO ()
-handleClient (Server stateVar) clientConn = do
+handleClient server@(Server stateVar) clientConn = do
     myChan <- newTChanIO
     pubChan <- atomically $ do
         st <- readTVar stateVar
@@ -36,7 +36,7 @@ handleClient (Server stateVar) clientConn = do
   where
     useClient clientChan clientId = forever $ do
         msg <- recvMsg clientConn
-        atomically $ handleClientMsg stateVar clientId clientChan msg
+        atomically $ handleClientMsg server clientId clientChan msg
     teardownClient clientId = atomically $ do
         modifyTVar' stateVar $ \st -> st
             { clients = M.delete clientId (clients st)
@@ -55,16 +55,17 @@ handleClient (Server stateVar) clientConn = do
         pure clientId
 
 handleClientMsg
-    :: TVar ServerState
+    :: Server
     -> P.ID P.Client
     -> TChan P.ServerMsg
     -> P.ClientMsg
     -> STM ()
-handleClientMsg stateVar clientId clientChan msg =
+handleClientMsg server@(Server stateVar) clientId clientChan msg =
     case msg of
-        P.MoveUnit P.UnitMotion{unitId, x, y} ->
+        P.MoveUnit motion@P.UnitMotion{unitId, x, y} -> do
             modifyTVar' stateVar $
                 alterUnit unitId $ fmap $ \unit -> (unit {P.x = x, P.y = y} :: P.UnitInfo)
+            broadcast server (P.UnitMoved motion)
         P.AddUnit{x, y, name, localId} -> do
             let id = P.UnitId {clientId, localId}
             modifyTVar' stateVar $
@@ -74,6 +75,11 @@ handleClientMsg stateVar clientId clientChan msg =
 alterUnit :: P.UnitId -> (Maybe P.UnitInfo -> Maybe P.UnitInfo) -> ServerState -> ServerState
 alterUnit id f st@ServerState{grid = g@GridState{units}} =
     st { grid = g { units = M.alter f id units } }
+
+broadcast :: Server -> P.ServerMsg -> STM ()
+broadcast (Server stateVar) msg = do
+    ch <- broadcastChan <$> readTVar stateVar
+    writeTChan ch msg
 
 newtype Server = Server (TVar ServerState)
 

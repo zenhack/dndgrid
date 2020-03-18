@@ -44,6 +44,7 @@ type ServerMsg
         { yourClientId : Int
         , unitInfo : List UnitInfo
         }
+    | UnitMoved UnitMotion
 
 
 type alias UnitInfo =
@@ -86,6 +87,14 @@ encodeUnitMotion { unitId, x, y } =
         ]
 
 
+decodeUnitMotion : D.Decoder UnitMotion
+decodeUnitMotion =
+    D.map3 UnitMotion
+        (D.field "unitId" decodeUnitId)
+        (D.field "x" D.int)
+        (D.field "y" D.int)
+
+
 encodeUnitId : UnitId -> E.Value
 encodeUnitId { clientId, localId } =
     E.object
@@ -96,9 +105,21 @@ encodeUnitId { clientId, localId } =
 
 decodeServerMsg : D.Decoder ServerMsg
 decodeServerMsg =
-    D.map2 (\cid units -> Welcome { yourClientId = cid, unitInfo = units })
-        (D.field "yourClientId" D.int)
-        (D.field "unitInfo" (D.list decodeUnitInfo))
+    D.field "tag" D.string
+        |> D.andThen
+            (\tag ->
+                case tag of
+                    "Welcome" ->
+                        D.map2 (\cid units -> Welcome { yourClientId = cid, unitInfo = units })
+                            (D.field "yourClientId" D.int)
+                            (D.field "unitInfo" (D.list decodeUnitInfo))
+
+                    "UnitMoved" ->
+                        D.map UnitMoved (D.field "contents" decodeUnitMotion)
+
+                    _ ->
+                        D.fail <| "unknown tag: " ++ tag
+            )
 
 
 decodeUnitInfo : D.Decoder UnitInfo
