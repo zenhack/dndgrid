@@ -6,6 +6,7 @@
 module ServerLogic
     ( Server
     , ClientConn(..)
+    , refreshBg
     , newServer
     , handleClient
     ) where
@@ -49,10 +50,18 @@ handleClient server@(Server stateVar) clientConn = do
             , clients = M.insert clientId clientChan (clients st)
             }
         writeTChan clientChan P.Welcome
-            { P.yourClientId = clientId
+            { P.bgImg = bgCount st
+            , P.yourClientId = clientId
             , P.unitInfo = M.elems $ units $ grid st
             }
         pure clientId
+
+refreshBg :: Server -> IO ()
+refreshBg server@(Server stateVar) = atomically $ do
+    st <- readTVar stateVar
+    let newBgCount = bgCount st + 1
+    writeTVar stateVar st { bgCount = newBgCount }
+    broadcast server $ P.RefreshBg $! newBgCount
 
 handleClientMsg
     :: Server
@@ -90,6 +99,7 @@ data GridState = GridState
 
 data ServerState = ServerState
     { grid          :: GridState
+    , bgCount       :: !Int
     , nextClientId  :: !(P.ID P.Client)
     , clients       :: M.Map (P.ID P.Client) (TChan P.ServerMsg)
     , broadcastChan :: TChan P.ServerMsg
@@ -105,6 +115,7 @@ newServer = atomically $ do
     ch <- newBroadcastTChan
     Server <$> newTVar ServerState
         { grid = GridState { units = M.empty }
+        , bgCount = 0
         , nextClientId = 0
         , clients = M.empty
         , broadcastChan = ch

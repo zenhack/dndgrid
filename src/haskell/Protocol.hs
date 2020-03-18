@@ -70,9 +70,11 @@ data ServerMsg
     = Welcome
         { yourClientId :: !(ID Client)
         , unitInfo     :: [UnitInfo]
+        , bgImg        :: !Int
         }
     | UnitMoved UnitMotion
     | UnitAdded UnitInfo
+    | RefreshBg !Int
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ServerMsg
 instance FromJSON ServerMsg

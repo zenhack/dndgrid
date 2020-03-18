@@ -6,7 +6,7 @@ import File exposing (File)
 import File.Select
 import Grid
 import Html exposing (..)
-import Html.Attributes exposing (href, style)
+import Html.Attributes exposing (href, src, style)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Protocol
@@ -69,6 +69,7 @@ type Model
             , name : String
             }
         , clientId : Int
+        , bgImg : Int
         }
 
 
@@ -131,8 +132,32 @@ view model =
                             ]
                         , button [ onClick RequestBgFile ] [ text "Change Background" ]
                         ]
-                , centered <| Grid.view identity grid
+                , centered <|
+                    Grid.view identity
+                        (Grid.merge (imgGrid m.bgImg) grid)
                 ]
+
+
+imgGrid : Int -> Grid.Grid (Html Msg)
+imgGrid bgImg =
+    { rows = gridSize
+    , cols = gridSize
+    , items =
+        [ { item =
+                img
+                    [ src <| "/bg/" ++ String.fromInt bgImg ++ "/bg.png"
+                    , style "z-index" "-1"
+                    ]
+                    []
+          , loc =
+                { x = 1
+                , y = 1
+                , w = gridSize
+                , h = gridSize
+                }
+          }
+        ]
+    }
 
 
 viewCell x y =
@@ -261,7 +286,7 @@ update msg model =
 applyServerMsg : Protocol.ServerMsg -> Model -> ( Model, Cmd Msg )
 applyServerMsg msg model =
     case ( msg, model ) of
-        ( Protocol.Welcome { yourClientId, unitInfo }, _ ) ->
+        ( Protocol.Welcome { yourClientId, unitInfo, bgImg }, _ ) ->
             ( Ready
                 { currentUnit = Nothing
                 , units =
@@ -275,12 +300,18 @@ applyServerMsg msg model =
                         |> Dict.fromList
                 , nextUnit = { id = 0, name = "" }
                 , clientId = yourClientId
+                , bgImg = bgImg
                 }
             , Cmd.none
             )
 
         ( _, NeedWelcome ) ->
             Debug.log "Unexpected message" ( NeedWelcome, Cmd.none )
+
+        ( Protocol.RefreshBg bg, Ready m ) ->
+            ( Ready { m | bgImg = bg }
+            , Cmd.none
+            )
 
         ( Protocol.UnitMoved { unitId, loc }, Ready m ) ->
             let

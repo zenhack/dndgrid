@@ -48,12 +48,17 @@ type alias UnitMotion =
 
 
 type ServerMsg
-    = Welcome
-        { yourClientId : Int
-        , unitInfo : List UnitInfo
-        }
+    = Welcome WelcomeMsg
     | UnitMoved UnitMotion
     | UnitAdded UnitInfo
+    | RefreshBg Int
+
+
+type alias WelcomeMsg =
+    { yourClientId : Int
+    , unitInfo : List UnitInfo
+    , bgImg : Int
+    }
 
 
 type alias UnitInfo =
@@ -115,15 +120,20 @@ decodeServerMsg =
             (\tag ->
                 case tag of
                     "Welcome" ->
-                        D.map2 (\cid units -> Welcome { yourClientId = cid, unitInfo = units })
-                            (D.field "yourClientId" D.int)
-                            (D.field "unitInfo" (D.list decodeUnitInfo))
+                        D.map Welcome <|
+                            D.map3 WelcomeMsg
+                                (D.field "yourClientId" D.int)
+                                (D.field "unitInfo" (D.list decodeUnitInfo))
+                                (D.field "bgImg" D.int)
 
                     "UnitMoved" ->
                         D.map UnitMoved (D.field "contents" decodeUnitMotion)
 
                     "UnitAdded" ->
                         D.map UnitAdded (D.field "contents" decodeUnitInfo)
+
+                    "RefreshBg" ->
+                        D.map RefreshBg (D.field "contents" D.int)
 
                     _ ->
                         D.fail <| "unknown tag: " ++ tag
