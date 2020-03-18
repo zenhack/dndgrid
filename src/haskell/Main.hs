@@ -28,13 +28,15 @@ data GridState = GridState
     }
 
 data ServerState = ServerState
-    { grid    :: GridState
-    , clients :: M.Map (P.ID P.Client) P.Client
+    { grid         :: GridState
+    , nextClientId :: !(P.ID P.Client)
+    , clients      :: M.Map (P.ID P.Client) P.Client
     }
 
 initialServerState :: ServerState
 initialServerState = ServerState
     { grid = GridState { units = M.empty }
+    , nextClientId = 0
     , clients = M.empty
     }
 
@@ -49,7 +51,15 @@ wsApp :: TVar ServerState -> Ws.ServerApp
 wsApp serverState pending = do
     conn <- Ws.acceptRequest pending
     Ws.withPingThread conn 30 (pure ()) $ do
-        Ws.sendTextData conn ("test" :: T.Text)
+        (newClientId, gridState) <- atomically $ do
+            st <- readTVar serverState
+            writeTVar serverState $! st { nextClientId = nextClientId st + 1 }
+            pure (nextClientId st, grid st)
+        let msg = P.Welcome
+                { P.yourClientId = newClientId
+                , P.unitInfo = M.elems (units gridState)
+                }
+        Ws.sendTextData conn (Just msg)
 
 makeApp :: IO Application
 makeApp = do

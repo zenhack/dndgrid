@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // https://package.elm-lang.org/packages/bburdette/websocket/latest/
   const mySockets = {};
   function sendSocketCommand(wat) {
-    console.log(wat)
     if (wat.cmd == "connect")
     {
       let scheme;

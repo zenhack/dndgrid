@@ -22,6 +22,7 @@ type Msg
     | ChooseSquare Int Int
     | SetUnitName String
     | DeployUnit
+    | GotServerMsg (Result Protocol.Error Protocol.ServerMsg)
 
 
 type alias Unit =
@@ -172,11 +173,19 @@ update msg (Model m) =
                     , Cmd.none
                     )
 
+        GotServerMsg result ->
+            Debug.log "result" ( Model m, Cmd.none )
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Protocol.recv GotServerMsg
+
 
 main =
     Browser.element
         { init = init
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = subscriptions
         , update = update
         , view = view
         }

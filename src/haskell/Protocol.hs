@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Protocol
     ( ClientMsg(..)
@@ -16,11 +17,14 @@ import Zhp
 import Data.Aeson   (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
+import Network.WebSockets (WebSocketsData(..))
+
+import qualified Data.Aeson     as Aeson
 import qualified Data.Text.Lazy as LT
 
 
 newtype ID a = ID Int
-    deriving(Show, Read, Eq, Ord, Bounded, FromJSON, ToJSON)
+    deriving(Show, Read, Eq, Ord, Bounded, FromJSON, ToJSON, Num)
 
 data Client
 data LocalUnit
@@ -34,6 +38,13 @@ data ServerMsg
         }
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ServerMsg
+instance FromJSON ServerMsg
+
+instance WebSocketsData (Maybe ServerMsg) where
+    toLazyByteString (Just msg) = Aeson.encode msg
+    toLazyByteString Nothing    = Aeson.encode Aeson.Null
+    fromLazyByteString = Aeson.decode
+    fromDataMessage = Aeson.decode . fromDataMessage
 
 data UnitInfo = UnitInfo
     { x    :: !Int
@@ -43,6 +54,7 @@ data UnitInfo = UnitInfo
     }
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON UnitInfo
+instance FromJSON UnitInfo
 
 data UnitId = UnitId
     { clientId :: !(ID Client)
@@ -50,3 +62,4 @@ data UnitId = UnitId
     }
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON UnitId
+instance FromJSON UnitId
