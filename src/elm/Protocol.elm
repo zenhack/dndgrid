@@ -20,6 +20,10 @@ import Ports
 import WebSocket
 
 
+
+-- TYPES
+
+
 type alias Point =
     { x : Int
     , y : Int
@@ -76,6 +80,10 @@ type Error
     | WebSocketError String
 
 
+
+-- ENCODERS
+
+
 encodeClientMsg : ClientMsg -> E.Value
 encodeClientMsg msg =
     case msg of
@@ -107,19 +115,23 @@ encodeUnitMotion { unitId, loc } =
         ]
 
 
-decodeUnitMotion : D.Decoder UnitMotion
-decodeUnitMotion =
-    D.map2 UnitMotion
-        (D.field "unitId" decodeUnitId)
-        (D.field "loc" decodePoint)
-
-
 encodeUnitId : UnitId -> E.Value
 encodeUnitId { clientId, localId } =
     E.object
         [ ( "clientId", E.int clientId )
         , ( "localId", E.int localId )
         ]
+
+
+
+-- DECODERS
+
+
+decodeUnitMotion : D.Decoder UnitMotion
+decodeUnitMotion =
+    D.map2 UnitMotion
+        (D.field "unitId" decodeUnitId)
+        (D.field "loc" decodePoint)
 
 
 decodeServerMsg : D.Decoder ServerMsg
@@ -181,6 +193,10 @@ decodeUnitId =
     D.map2 UnitId
         (D.field "clientId" D.int)
         (D.field "localId" D.int)
+
+
+
+-- COMMUNICATION HELPERS
 
 
 recv : (Result Error ServerMsg -> msg) -> Sub msg

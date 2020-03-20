@@ -15,9 +15,8 @@ import Svg exposing (svg)
 import Svg.Attributes exposing (height, viewBox, width)
 
 
-cellSizePx : Float
-cellSizePx =
-    96
+
+-- MODEL
 
 
 {-| A globally unique identifier for a unit.
@@ -28,8 +27,8 @@ Ideally the type would be:
        , localId : Int
        }
 
-...but the record version is not comparable, so we can't use it
-as a dictionary key. so instead we encode it as (clientId, localId)
+...like Protocol.UnitId, but the record version is not comparable, so we can't
+use it as a dictionary key. so instead we encode it as (clientId, localId)
 
 -}
 type alias UnitID =
@@ -72,14 +71,14 @@ type alias Unit =
     }
 
 
-type Model
-    = NeedWelcome
-    | Ready ReadyModel
-
-
 type TabId
     = AddUnit
     | GridSettings
+
+
+type Model
+    = NeedWelcome
+    | Ready ReadyModel
 
 
 type alias ReadyModel =
@@ -96,6 +95,27 @@ type alias ReadyModel =
     , gridSize : Protocol.Point
     , zoom : Float
     }
+
+
+init : {} -> ( Model, Cmd Msg )
+init _ =
+    ( NeedWelcome
+    , Protocol.connect
+    )
+
+
+
+-- VIEW
+
+
+cellSizePx : Float
+cellSizePx =
+    96
+
+
+zoomPx : Float -> String
+zoomPx zoom =
+    String.fromInt (floor (zoom * cellSizePx)) ++ "px"
 
 
 unitGridItem : ( UnitID, Unit ) -> Grid.GridItem (Html Msg)
@@ -141,13 +161,6 @@ centeredY =
 centered : Html msg -> Html msg
 centered =
     centeredX >> centeredY
-
-
-init : {} -> ( Model, Cmd Msg )
-init _ =
-    ( NeedWelcome
-    , Protocol.connect
-    )
 
 
 view : Model -> Html Msg
@@ -338,6 +351,40 @@ viewCell zoom layer contents x y =
             , Layer.layer Layer.gridPassive
             ]
             [ contents ]
+
+
+{-| A transparent "button" that we place over a grid cell,
+because some browsers (chromium) do not recognize onClick events for div
+tags.
+-}
+gridButton : Float -> msg -> Html msg
+gridButton zoom msg =
+    let
+        cellSize =
+            zoomPx zoom
+    in
+    -- TODO: aria role? I really don't like where this
+    -- app is in terms of a11y in general, but given
+    -- the whole point is to be a *grid* I'm not sure
+    -- how to go about making this useful for folks
+    -- who can't see it...
+    a
+        [ href "#"
+        , onClick msg
+        , style "height" "100%"
+        , style "width" "100%"
+        ]
+        [ svg
+            [ width cellSize
+            , height cellSize
+            , viewBox <| "0 0 " ++ cellSize ++ " " ++ cellSize
+            ]
+            []
+        ]
+
+
+
+-- UPDATE
 
 
 setGridSize :
@@ -587,44 +634,17 @@ applyServerMsg msg model =
             )
 
 
-zoomPx : Float -> String
-zoomPx zoom =
-    String.fromInt (floor (zoom * cellSizePx)) ++ "px"
 
-
-{-| A transparent "button" that we place over a grid cell,
-because some browsers (chromium) do not recognize onClick events for div
-tags.
--}
-gridButton : Float -> msg -> Html msg
-gridButton zoom msg =
-    let
-        cellSize =
-            zoomPx zoom
-    in
-    -- TODO: aria role? I really don't like where this
-    -- app is in terms of a11y in general, but given
-    -- the whole point is to be a *grid* I'm not sure
-    -- how to go about making this useful for folks
-    -- who can't see it...
-    a
-        [ href "#"
-        , onClick msg
-        , style "height" "100%"
-        , style "width" "100%"
-        ]
-        [ svg
-            [ width cellSize
-            , height cellSize
-            , viewBox <| "0 0 " ++ cellSize ++ " " ++ cellSize
-            ]
-            []
-        ]
+-- SUBSCRIPTIONS
 
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Protocol.recv GotServerMsg
+
+
+
+-- MAIN
 
 
 main =
