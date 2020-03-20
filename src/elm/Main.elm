@@ -51,11 +51,16 @@ type Msg
     | SetUnitName String
     | DeployUnit
     | GotServerMsg (Result Protocol.Error Protocol.ServerMsg)
-    | SelectedBgFile File
+    | SelectedImg ImgPurpose File
     | UploadBgResult (Maybe Http.Error)
-    | RequestBgFile
+    | RequestImg ImgPurpose
     | SetGridWidth String
     | SetGridHeight String
+
+
+type ImgPurpose
+    = Bg
+    | UnitSprite
 
 
 type alias Unit =
@@ -75,6 +80,7 @@ type alias ReadyModel =
     , nextUnit :
         { id : Int
         , name : String
+        , img : Maybe File
         }
     , clientId : Int
     , bgImg : Int
@@ -220,6 +226,7 @@ viewAddUnit =
     tblForm []
         [ h1 [] [ text "Add Unit" ]
         , labeledInput "name" "Name" [ onInput SetUnitName ] []
+        , labeledInput "image" "Image" [ type_ "file", onClick (RequestImg UnitSprite) ] []
         , button [ onClick DeployUnit ] [ text "Add" ]
         ]
 
@@ -230,7 +237,7 @@ viewGridSettings =
         [ h1 [] [ text "Grid Settings" ]
         , labeledInput "height" "Grid height" [ onInput SetGridHeight ] []
         , labeledInput "width" "Grid width" [ onInput SetGridWidth ] []
-        , labeledInput "bg" "Background Image" [ type_ "file", onClick RequestBgFile ] []
+        , labeledInput "bg" "Background Image" [ type_ "file", onClick (RequestImg Bg) ] []
         ]
 
 
@@ -346,6 +353,7 @@ update msg model =
                             { id =
                                 m.nextUnit.id + 1
                             , name = ""
+                            , img = Nothing
                             }
                     }
                 , Protocol.send <|
@@ -395,12 +403,21 @@ update msg model =
                             }
                     )
 
-        ( RequestBgFile, _ ) ->
+        ( RequestImg purpose, _ ) ->
             ( model
-            , File.Select.file [ "image/png" ] SelectedBgFile
+            , File.Select.file [ "image/png" ] (SelectedImg purpose)
             )
 
-        ( SelectedBgFile file, _ ) ->
+        ( SelectedImg UnitSprite file, Ready m ) ->
+            let
+                nextUnit =
+                    m.nextUnit
+            in
+            ( Ready { m | nextUnit = { nextUnit | img = Just file } }
+            , Cmd.none
+            )
+
+        ( SelectedImg Bg file, _ ) ->
             ( model
             , Protocol.uploadBg file
                 (\res ->
@@ -435,7 +452,11 @@ applyServerMsg msg model =
                                 )
                             )
                         |> Dict.fromList
-                , nextUnit = { id = 0, name = "" }
+                , nextUnit =
+                    { id = 0
+                    , name = ""
+                    , img = Nothing
+                    }
                 , clientId = yourClientId
                 , bgImg = bgImg
                 , gridSize = gridSize
