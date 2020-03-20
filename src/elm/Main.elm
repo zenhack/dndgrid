@@ -6,7 +6,7 @@ import File exposing (File)
 import File.Select
 import Grid
 import Html exposing (..)
-import Html.Attributes exposing (href, src, style)
+import Html.Attributes exposing (for, href, name, src, style, type_)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Layer
@@ -145,6 +145,7 @@ view model =
                 [ centeredX <|
                     div []
                         [ centeredX viewAddUnit
+                        , hr [] []
                         , centeredX viewGridSettings
                         ]
                 , centeredX <| viewGrid m
@@ -194,26 +195,42 @@ viewGrid m =
         (Grid.merge (imgGrid m.gridSize m.bgImg) grid)
 
 
+labeledInput : String -> String -> List (Attribute msg) -> List (Html msg) -> Html msg
+labeledInput inputName labelText attrs kids =
+    let
+        tableCol =
+            div [ style "display" "table-col" ]
+
+        tableRow =
+            div [ style "display" "table-row" ]
+    in
+    tableRow
+        [ tableCol [ label [ for inputName ] [ text labelText ] ]
+        , tableCol [ input (name inputName :: attrs) kids ]
+        ]
+
+
+tblForm : List (Attribute msg) -> List (Html msg) -> Html msg
+tblForm attrs kids =
+    form (style "display" "table" :: attrs) kids
+
+
 viewAddUnit : Html Msg
 viewAddUnit =
-    form []
-        [ input [ onInput SetUnitName ] []
-        , button [ onClick DeployUnit ] [ text "Add Unit" ]
+    tblForm []
+        [ h1 [] [ text "Add Unit" ]
+        , labeledInput "name" "Name" [ onInput SetUnitName ] []
+        , button [ onClick DeployUnit ] [ text "Add" ]
         ]
 
 
 viewGridSettings : Html Msg
 viewGridSettings =
-    form []
-        [ button [ onClick RequestBgFile ] [ text "Change Background" ]
-        , div []
-            [ label [] [ text "Grid height" ]
-            , input [ onInput SetGridHeight ] []
-            ]
-        , div []
-            [ label [] [ text "Grid width" ]
-            , input [ onInput SetGridWidth ] []
-            ]
+    tblForm []
+        [ h1 [] [ text "Grid Settings" ]
+        , labeledInput "height" "Grid height" [ onInput SetGridHeight ] []
+        , labeledInput "width" "Grid width" [ onInput SetGridWidth ] []
+        , labeledInput "bg" "Background Image" [ type_ "file", onClick RequestBgFile ] []
         ]
 
 
