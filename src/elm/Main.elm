@@ -15,6 +15,7 @@ import Svg exposing (svg)
 import Svg.Attributes exposing (height, viewBox, width)
 
 
+cellSizePx : Float
 cellSizePx =
     96
 
@@ -56,6 +57,7 @@ type Msg
     | RequestImg ImgPurpose
     | SetGridWidth String
     | SetGridHeight String
+    | SetZoom String
 
 
 type ImgPurpose
@@ -85,6 +87,7 @@ type alias ReadyModel =
     , clientId : Int
     , bgImg : Int
     , gridSize : Protocol.Point
+    , zoom : Float
     }
 
 
@@ -154,8 +157,14 @@ view model =
                         , hr [] []
                         , centeredX <| viewGridSettings m.gridSize
                         ]
+                , hr [] []
+                , centeredX viewZoom
                 , centeredX <| viewGrid m
                 ]
+
+
+viewZoom =
+    labeled input "zoom" "Zoom %" [ type_ "number", onInput SetZoom ] []
 
 
 viewGrid : ReadyModel -> Html Msg
@@ -163,7 +172,7 @@ viewGrid m =
     let
         cells =
             Grid.fromFunction
-                (viewCell Layer.gridPassive (div [] []))
+                (viewCell m.zoom Layer.gridPassive (div [] []))
                 m.gridSize.x
                 m.gridSize.y
 
@@ -176,8 +185,9 @@ viewGrid m =
                     Grid.fromFunction
                         (\x y ->
                             viewCell
+                                m.zoom
                                 Layer.gridActive
-                                (gridButton (ChooseSquare { x = x, y = y }))
+                                (gridButton m.zoom (ChooseSquare { x = x, y = y }))
                                 x
                                 y
                         )
@@ -268,10 +278,10 @@ viewGridSettings { x, y } =
         ]
 
 
-viewCell layer contents x y =
+viewCell zoom layer contents x y =
     let
         size =
-            String.fromInt cellSizePx ++ "px"
+            zoomPx zoom
     in
     Just <|
         div
@@ -326,6 +336,16 @@ update msg model =
 
         ( SetGridHeight str, Ready m ) ->
             setGridSize str m (\y sz -> { sz | y = y })
+
+        ( SetZoom str, Ready m ) ->
+            case String.toInt str of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just n ->
+                    ( Ready { m | zoom = toFloat n / 100 }
+                    , Cmd.none
+                    )
 
         ( DeployUnit, Ready m ) ->
             if m.nextUnit.name == "" then
@@ -459,6 +479,7 @@ applyServerMsg msg model =
                 , clientId = yourClientId
                 , bgImg = bgImg
                 , gridSize = gridSize
+                , zoom = 1
                 }
             , Cmd.none
             )
@@ -505,15 +526,20 @@ applyServerMsg msg model =
             )
 
 
+zoomPx : Float -> String
+zoomPx zoom =
+    String.fromInt (floor (zoom * cellSizePx)) ++ "px"
+
+
 {-| A transparent "button" that we place over a grid cell,
 because some browsers (chromium) do not recognize onClick events for div
 tags.
 -}
-gridButton : msg -> Html msg
-gridButton msg =
+gridButton : Float -> msg -> Html msg
+gridButton zoom msg =
     let
         cellSize =
-            String.fromInt cellSizePx
+            zoomPx zoom
     in
     -- TODO: aria role? I really don't like where this
     -- app is in terms of a11y in general, but given
