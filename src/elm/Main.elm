@@ -254,7 +254,6 @@ viewGridSettings { x, y } =
             "height"
             "Grid height"
             [ type_ "number"
-            , value (String.fromInt y)
             , onInput SetGridHeight
             ]
             []
@@ -262,7 +261,6 @@ viewGridSettings { x, y } =
             "width"
             "Grid width"
             [ type_ "number"
-            , value (String.fromInt x)
             , onInput SetGridWidth
             ]
             []
