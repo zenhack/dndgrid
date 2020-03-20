@@ -201,8 +201,14 @@ viewGrid m =
         (Grid.merge (imgGrid m.gridSize m.bgImg) grid)
 
 
-labeledInput : String -> String -> List (Attribute msg) -> List (Html msg) -> Html msg
-labeledInput inputName labelText attrs kids =
+labeled :
+    (List (Attribute msg) -> List (Html msg) -> Html msg)
+    -> String
+    -> String
+    -> List (Attribute msg)
+    -> List (Html msg)
+    -> Html msg
+labeled element inputName labelText attrs kids =
     let
         tableCol =
             div [ style "display" "table-col" ]
@@ -212,7 +218,7 @@ labeledInput inputName labelText attrs kids =
     in
     tableRow
         [ tableCol [ label [ for inputName ] [ text labelText ] ]
-        , tableCol [ input (name inputName :: attrs) kids ]
+        , tableCol [ element (name inputName :: attrs) kids ]
         ]
 
 
@@ -225,8 +231,8 @@ viewAddUnit : Html Msg
 viewAddUnit =
     tblForm []
         [ h1 [] [ text "Add Unit" ]
-        , labeledInput "name" "Name" [ onInput SetUnitName ] []
-        , labeledInput "image" "Image" [ type_ "file", onClick (RequestImg UnitSprite) ] []
+        , labeled input "name" "Name" [ onInput SetUnitName ] []
+        , labeled button "image" "Image" [ onClick (RequestImg UnitSprite) ] [ text "Choose..." ]
         , button [ onClick DeployUnit ] [ text "Add" ]
         ]
 
@@ -235,9 +241,9 @@ viewGridSettings : Html Msg
 viewGridSettings =
     tblForm []
         [ h1 [] [ text "Grid Settings" ]
-        , labeledInput "height" "Grid height" [ onInput SetGridHeight ] []
-        , labeledInput "width" "Grid width" [ onInput SetGridWidth ] []
-        , labeledInput "bg" "Background Image" [ type_ "file", onClick (RequestImg Bg) ] []
+        , labeled input "height" "Grid height" [ onInput SetGridHeight ] []
+        , labeled input "width" "Grid width" [ onInput SetGridWidth ] []
+        , labeled button "bg" "Background Image" [ onClick (RequestImg Bg) ] [ text "Choose..." ]
         ]
 
 
