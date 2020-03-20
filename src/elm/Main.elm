@@ -141,66 +141,80 @@ view model =
             text "Loading..."
 
         Ready m ->
-            let
-                cells =
-                    Grid.fromFunction
-                        (viewCell Layer.gridPassive (div [] []))
-                        m.gridSize.x
-                        m.gridSize.y
-
-                cellButtons =
-                    case m.currentUnit of
-                        Nothing ->
-                            []
-
-                        Just _ ->
-                            Grid.fromFunction
-                                (\x y ->
-                                    viewCell
-                                        Layer.gridActive
-                                        (gridButton (ChooseSquare { x = x, y = y }))
-                                        x
-                                        y
-                                )
-                                m.gridSize.x
-                                m.gridSize.y
-                                |> .items
-
-                units =
-                    Dict.toList m.units
-                        |> List.map unitGridItem
-
-                grid =
-                    { cells
-                        | items =
-                            cells.items
-                                ++ units
-                                ++ cellButtons
-                    }
-            in
             div []
                 [ centeredX <|
                     div []
-                        (List.map centeredX <|
-                            [ div []
-                                [ input [ onInput SetUnitName ] []
-                                , button [ onClick DeployUnit ] [ text "Add Unit" ]
-                                ]
-                            , button [ onClick RequestBgFile ] [ text "Change Background" ]
-                            , div []
-                                [ label [] [ text "Grid height" ]
-                                , input [ onInput SetGridHeight ] []
-                                ]
-                            , div []
-                                [ label [] [ text "Grid width" ]
-                                , input [ onInput SetGridWidth ] []
-                                ]
-                            ]
-                        )
-                , centeredX <|
-                    Grid.view identity
-                        (Grid.merge (imgGrid m.gridSize m.bgImg) grid)
+                        [ centeredX viewAddUnit
+                        , centeredX viewGridSettings
+                        ]
+                , centeredX <| viewGrid m
                 ]
+
+
+viewGrid : ReadyModel -> Html Msg
+viewGrid m =
+    let
+        cells =
+            Grid.fromFunction
+                (viewCell Layer.gridPassive (div [] []))
+                m.gridSize.x
+                m.gridSize.y
+
+        cellButtons =
+            case m.currentUnit of
+                Nothing ->
+                    []
+
+                Just _ ->
+                    Grid.fromFunction
+                        (\x y ->
+                            viewCell
+                                Layer.gridActive
+                                (gridButton (ChooseSquare { x = x, y = y }))
+                                x
+                                y
+                        )
+                        m.gridSize.x
+                        m.gridSize.y
+                        |> .items
+
+        units =
+            Dict.toList m.units
+                |> List.map unitGridItem
+
+        grid =
+            { cells
+                | items =
+                    cells.items
+                        ++ units
+                        ++ cellButtons
+            }
+    in
+    Grid.view identity
+        (Grid.merge (imgGrid m.gridSize m.bgImg) grid)
+
+
+viewAddUnit : Html Msg
+viewAddUnit =
+    div []
+        [ input [ onInput SetUnitName ] []
+        , button [ onClick DeployUnit ] [ text "Add Unit" ]
+        ]
+
+
+viewGridSettings : Html Msg
+viewGridSettings =
+    div []
+        [ button [ onClick RequestBgFile ] [ text "Change Background" ]
+        , div []
+            [ label [] [ text "Grid height" ]
+            , input [ onInput SetGridHeight ] []
+            ]
+        , div []
+            [ label [] [ text "Grid width" ]
+            , input [ onInput SetGridWidth ] []
+            ]
+        ]
 
 
 imgGrid : Protocol.Point -> Int -> Grid.Grid (Html Msg)
