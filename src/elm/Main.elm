@@ -196,7 +196,7 @@ viewGrid m =
 
 viewAddUnit : Html Msg
 viewAddUnit =
-    div []
+    form []
         [ input [ onInput SetUnitName ] []
         , button [ onClick DeployUnit ] [ text "Add Unit" ]
         ]
@@ -204,7 +204,7 @@ viewAddUnit =
 
 viewGridSettings : Html Msg
 viewGridSettings =
-    div []
+    form []
         [ button [ onClick RequestBgFile ] [ text "Change Background" ]
         , div []
             [ label [] [ text "Grid height" ]
