@@ -9,6 +9,7 @@ import Html exposing (..)
 import Html.Attributes exposing (href, src, style)
 import Html.Events exposing (onClick, onInput)
 import Http
+import Layer
 import Protocol
 import Svg exposing (svg)
 import Svg.Attributes exposing (height, viewBox, width)
@@ -88,7 +89,7 @@ unitGridItem ( id, { loc, name } ) =
             a
                 [ href "#"
                 , onClick (ChooseUnit id)
-                , style "z-index" "1"
+                , Layer.layer Layer.units
                 ]
                 [ text name ]
     , loc =
@@ -142,15 +143,39 @@ view model =
         Ready m ->
             let
                 cells =
-                    Grid.fromFunction viewCell m.gridSize.x m.gridSize.y
+                    Grid.fromFunction
+                        (viewCell Layer.gridPassive (div [] []))
+                        m.gridSize.x
+                        m.gridSize.y
+
+                cellButtons =
+                    case m.currentUnit of
+                        Nothing ->
+                            []
+
+                        Just _ ->
+                            Grid.fromFunction
+                                (\x y ->
+                                    viewCell
+                                        Layer.gridActive
+                                        (gridButton (ChooseSquare { x = x, y = y }))
+                                        x
+                                        y
+                                )
+                                m.gridSize.x
+                                m.gridSize.y
+                                |> .items
+
+                units =
+                    Dict.toList m.units
+                        |> List.map unitGridItem
 
                 grid =
                     { cells
                         | items =
                             cells.items
-                                ++ (Dict.toList m.units
-                                        |> List.map unitGridItem
-                                   )
+                                ++ units
+                                ++ cellButtons
                     }
             in
             div []
@@ -190,7 +215,7 @@ imgGrid gridSize bgImg =
         [ { item =
                 img
                     [ src <| "/bg/" ++ String.fromInt bgImg ++ "/bg.png"
-                    , style "z-index" "-1"
+                    , Layer.layer Layer.bg
                     , style "width" <| size gridSize.x
                     , style "height" <| size gridSize.y
                     ]
@@ -206,7 +231,7 @@ imgGrid gridSize bgImg =
     }
 
 
-viewCell x y =
+viewCell layer contents x y =
     let
         size =
             String.fromInt cellSizePx ++ "px"
@@ -217,9 +242,9 @@ viewCell x y =
             , style "margin" "0px"
             , style "height" size
             , style "width" size
+            , Layer.layer Layer.gridPassive
             ]
-            [ transparentButton 0 (ChooseSquare { x = x, y = y })
-            ]
+            [ contents ]
 
 
 setGridSize :
@@ -429,12 +454,12 @@ applyServerMsg msg model =
             )
 
 
-{-| Render a transparent svg. This is so we can click on grid cells;
-some browsers (chromium) do not recognize onClick events for div
+{-| A transparent "button" that we place over a grid cell,
+because some browsers (chromium) do not recognize onClick events for div
 tags.
 -}
-transparentButton : Int -> msg -> Html msg
-transparentButton zIndex msg =
+gridButton : msg -> Html msg
+gridButton msg =
     let
         cellSize =
             String.fromInt cellSizePx
@@ -447,7 +472,6 @@ transparentButton zIndex msg =
     a
         [ href "#"
         , onClick msg
-        , style "z-index" <| String.fromInt zIndex
         , style "height" "100%"
         , style "width" "100%"
         ]
