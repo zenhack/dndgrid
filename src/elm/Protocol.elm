@@ -12,6 +12,9 @@ module Protocol exposing
     , uploadBg
     )
 
+{-| Support for the communication protocol between clients and servers.
+-}
+
 import File exposing (File)
 import Http
 import Json.Decode as D
@@ -199,6 +202,8 @@ decodeUnitId =
 -- COMMUNICATION HELPERS
 
 
+{-| Receive messages from the server
+-}
 recv : (Result Error ServerMsg -> msg) -> Sub msg
 recv toMsg =
     Ports.receiveSocketMsg <|
@@ -218,6 +223,8 @@ recv toMsg =
             )
 
 
+{-| Upload a file to use as the background.
+-}
 uploadBg : File -> (Result Http.Error () -> msg) -> Cmd msg
 uploadBg file mkMsg =
     Http.post
@@ -227,6 +234,8 @@ uploadBg file mkMsg =
         }
 
 
+{-| Send a message to the server
+-}
 send : ClientMsg -> Cmd msg
 send msg =
     WebSocket.send Ports.sendSocketCommand <|
@@ -236,6 +245,8 @@ send msg =
             }
 
 
+{-| Connect to the server.
+-}
 connect : Cmd msg
 connect =
     WebSocket.send Ports.sendSocketCommand <|
@@ -246,6 +257,8 @@ connect =
             }
 
 
+{-| Disconnect from the server
+-}
 disconnect : Cmd msg
 disconnect =
     WebSocket.send Ports.sendSocketCommand <|
