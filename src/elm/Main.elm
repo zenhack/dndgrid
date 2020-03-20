@@ -197,8 +197,17 @@ viewGrid m =
                         ++ cellButtons
             }
     in
-    Grid.view identity
-        (Grid.merge (imgGrid m.gridSize m.bgImg) grid)
+    Grid.view
+        (bgAttrs m.gridSize m.bgImg)
+        grid
+
+
+bgAttrs : Protocol.Point -> Int -> List (Attribute msg)
+bgAttrs gridSize bgImg =
+    [ style "background-image" <| "url(\"/bg/" ++ String.fromInt bgImg ++ "/bg.png\")"
+    , style "background-size" "contain"
+    , style "background-repeat" "no-repeat"
+    ]
 
 
 labeled :
@@ -259,34 +268,6 @@ viewGridSettings { x, y } =
             []
         , labeled button "bg" "Background Image" [ onClick (RequestImg Bg) ] [ text "Choose..." ]
         ]
-
-
-imgGrid : Protocol.Point -> Int -> Grid.Grid (Html Msg)
-imgGrid gridSize bgImg =
-    let
-        size g =
-            String.fromInt (g * cellSizePx) ++ "px"
-    in
-    { rows = gridSize.x
-    , cols = gridSize.y
-    , items =
-        [ { item =
-                img
-                    [ src <| "/bg/" ++ String.fromInt bgImg ++ "/bg.png"
-                    , Layer.layer Layer.bg
-                    , style "width" <| size gridSize.x
-                    , style "height" <| size gridSize.y
-                    ]
-                    []
-          , loc =
-                { x = 1
-                , y = 1
-                , w = gridSize.x
-                , h = gridSize.y
-                }
-          }
-        ]
-    }
 
 
 viewCell layer contents x y =

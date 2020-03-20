@@ -68,27 +68,29 @@ fromFunction f w h =
     }
 
 
-view : (a -> Html msg) -> Grid a -> Html msg
-view viewItem { rows, cols, items } =
+view : List (Attribute msg) -> Grid (Html msg) -> Html msg
+view attrs { rows, cols, items } =
     let
         repeat1Fr n =
             "repeat(" ++ String.fromInt n ++ ", 1fr)"
     in
     div
-        [ style "display" "grid"
-        , style "gap" "0px"
-        , style "grid-template-rows" (repeat1Fr rows)
-        , style "grid-template-columns" (repeat1Fr cols)
-        ]
-        (List.map (viewGridItem viewItem) items)
+        ([ style "display" "grid"
+         , style "gap" "0px"
+         , style "grid-template-rows" (repeat1Fr rows)
+         , style "grid-template-columns" (repeat1Fr cols)
+         ]
+            ++ attrs
+        )
+        (List.map viewGridItem items)
 
 
-viewGridItem : (a -> Html msg) -> GridItem a -> Html msg
-viewGridItem viewItem { item, loc } =
+viewGridItem : GridItem (Html msg) -> Html msg
+viewGridItem { item, loc } =
     div
         [ style "grid-row-start" (String.fromInt loc.y)
         , style "grid-row-end" (String.fromInt (loc.y + loc.h))
         , style "grid-column-start" (String.fromInt loc.x)
         , style "grid-column-end" (String.fromInt (loc.x + loc.w))
         ]
-        [ viewItem item ]
+        [ item ]
