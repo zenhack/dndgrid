@@ -58,6 +58,7 @@ type Msg
     | SetGridWidth String
     | SetGridHeight String
     | SetZoom String
+    | SetTab TabId
 
 
 type ImgPurpose
@@ -76,9 +77,15 @@ type Model
     | Ready ReadyModel
 
 
+type TabId
+    = AddUnit
+    | GridSettings
+
+
 type alias ReadyModel =
     { currentUnit : Maybe UnitID
     , units : Dict UnitID Unit
+    , tabId : Maybe TabId
     , nextUnit :
         { id : Int
         , name : String
@@ -151,20 +158,29 @@ view model =
 
         Ready m ->
             div []
-                [ centeredX <|
-                    div []
-                        [ centeredX viewAddUnit
-                        , hr [] []
-                        , centeredX <| viewGridSettings m.gridSize
-                        ]
-                , hr [] []
-                , centeredX viewZoom
+                [ centeredX <| viewTabs m
                 , centeredX <| viewGrid m
                 ]
 
 
-viewZoom =
-    labeled input "zoom" "Zoom %" [ type_ "number", onInput SetZoom ] []
+viewTabs : ReadyModel -> Html Msg
+viewTabs m =
+    div [ style "margin" "1rem" ]
+        [ centeredX <|
+            nav []
+                [ ul [ style "list-style" "none" ]
+                    [ viewTab m.tabId AddUnit
+                    , viewTab m.tabId GridSettings
+                    ]
+                ]
+        , div []
+            (List.map (\( t, v ) -> viewTabContents m.tabId t (centeredX v))
+                [ ( AddUnit, viewAddUnit )
+                , ( GridSettings, viewGridSettings m.gridSize )
+                ]
+                |> List.concat
+            )
+        ]
 
 
 viewGrid : ReadyModel -> Html Msg
@@ -246,6 +262,34 @@ tblForm attrs kids =
     form (style "display" "table" :: attrs) kids
 
 
+tabText : TabId -> String
+tabText tabId =
+    case tabId of
+        AddUnit ->
+            "Add Unit"
+
+        GridSettings ->
+            "Grid Settings"
+
+
+viewTab : Maybe TabId -> TabId -> Html Msg
+viewTab old new =
+    li
+        [ style "display" "inline-block"
+        , style "margin" "0.25rem"
+        ]
+        [ a [ href "#", onClick (SetTab new) ] [ text (tabText new) ] ]
+
+
+viewTabContents : Maybe TabId -> TabId -> Html msg -> List (Html msg)
+viewTabContents selected rendering output =
+    if selected == Just rendering then
+        [ output ]
+
+    else
+        []
+
+
 viewAddUnit : Html Msg
 viewAddUnit =
     tblForm []
@@ -275,6 +319,8 @@ viewGridSettings { x, y } =
             ]
             []
         , labeled button "bg" "Background Image" [ onClick (RequestImg Bg) ] [ text "Choose..." ]
+        , hr [] []
+        , labeled input "zoom" "Zoom %" [ type_ "number", onInput SetZoom ] []
         ]
 
 
@@ -331,6 +377,19 @@ update msg model =
         ( _, NeedWelcome ) ->
             Debug.log "unexpected non-server msg" ( model, Cmd.none )
 
+        ( SetTab tabId, Ready m ) ->
+            ( Ready
+                { m
+                    | tabId =
+                        if m.tabId == Just tabId then
+                            Nothing
+
+                        else
+                            Just tabId
+                }
+            , Cmd.none
+            )
+
         ( SetGridWidth str, Ready m ) ->
             setGridSize str m (\x sz -> { sz | x = x })
 
@@ -361,7 +420,8 @@ update msg model =
                 in
                 ( Ready
                     { m
-                        | currentUnit =
+                        | tabId = Nothing
+                        , currentUnit =
                             Just unitId
                         , units =
                             Dict.insert
@@ -462,6 +522,7 @@ applyServerMsg msg model =
         ( Protocol.Welcome { yourClientId, unitInfo, bgImg, gridSize }, _ ) ->
             ( Ready
                 { currentUnit = Nothing
+                , tabId = Nothing
                 , units =
                     unitInfo
                         |> List.map
