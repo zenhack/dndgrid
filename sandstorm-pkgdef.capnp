@@ -235,6 +235,7 @@ const myCommand :Spk.Manifest.Command = (
   argv = ["/sandstorm-http-bridge", "3000", "--", "/start.sh"],
   environ = [
     (key = "BG_FILE_PATH", value = "/var/bg.png"),
+    (key = "DB_PATH", value = "/var/dndgrid.db"),
     # Note that this defines the *entire* environment seen by your app.
     (key = "PATH", value = "/usr/local/bin:/usr/bin:/bin"),
     (key = "SANDSTORM", value = "1"),
