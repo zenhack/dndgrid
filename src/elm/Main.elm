@@ -6,7 +6,7 @@ import File exposing (File)
 import File.Select
 import Grid
 import Html exposing (..)
-import Html.Attributes exposing (for, href, name, src, style, type_)
+import Html.Attributes exposing (for, href, name, src, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Layer
@@ -152,7 +152,7 @@ view model =
                     div []
                         [ centeredX viewAddUnit
                         , hr [] []
-                        , centeredX viewGridSettings
+                        , centeredX <| viewGridSettings m.gridSize
                         ]
                 , centeredX <| viewGrid m
                 ]
@@ -237,12 +237,26 @@ viewAddUnit =
         ]
 
 
-viewGridSettings : Html Msg
-viewGridSettings =
+viewGridSettings : Protocol.Point -> Html Msg
+viewGridSettings { x, y } =
     tblForm []
         [ h1 [] [ text "Grid Settings" ]
-        , labeled input "height" "Grid height" [ onInput SetGridHeight ] []
-        , labeled input "width" "Grid width" [ onInput SetGridWidth ] []
+        , labeled input
+            "height"
+            "Grid height"
+            [ type_ "number"
+            , value (String.fromInt y)
+            , onInput SetGridHeight
+            ]
+            []
+        , labeled input
+            "width"
+            "Grid width"
+            [ type_ "number"
+            , value (String.fromInt x)
+            , onInput SetGridWidth
+            ]
+            []
         , labeled button "bg" "Background Image" [ onClick (RequestImg Bg) ] [ text "Choose..." ]
         ]
 
