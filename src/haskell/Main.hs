@@ -66,7 +66,7 @@ makeApp = do
     db <- DB.open dbPath
     DB.init db
 
-    server <- newServer
+    server <- newServer db
     scottyApp <- makeScottyApp bgPath server
     pure $ WaiWs.websocketsOr
         Ws.defaultConnectionOptions

@@ -1,15 +1,24 @@
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE QuasiQuotes    #-}
 module DB
     ( Conn
     , open
     , init
+
+    , getGridSize
+    , setGridSize
     ) where
 
 import Zhp
 
+import Control.Exception.Safe (throwString)
+
+import           Database.SQLite.Simple (NamedParam((:=)))
 import qualified Database.SQLite.Simple as SQL
 
 import Text.Heredoc (here)
+
+import Protocol (Point(..))
 
 newtype Conn = Conn SQL.Connection
 
@@ -34,3 +43,28 @@ init (Conn c) =
                 INSERT OR IGNORE INTO grids(id, height, width)
                 VALUES (0, 10, 10)
             |]
+
+
+setGridSize :: Conn -> Point -> IO ()
+setGridSize (Conn c) Protocol.Point{x, y} =
+    SQL.executeNamed c
+        [here|
+            UPDATE grids
+            SET height = :height, width = :width
+            WHERE id = 0
+        |]
+        [ ":height" := y
+        , ":width" := x
+        ]
+
+getGridSize :: Conn -> IO Point
+getGridSize (Conn c) = do
+    rs <- SQL.query_ c
+        [here|
+            SELECT width, height
+            FROM grids
+            WHERE id = 0
+        |]
+    case rs of
+        [(x, y)] -> pure Point{x, y}
+        _ -> throwString "Grid not found. Has the DB been initialized?"

@@ -18,10 +18,11 @@ import Control.Concurrent.STM
 import Control.Exception.Safe   (bracket)
 
 import qualified Data.Map.Strict as M
+import qualified DB
 import qualified Protocol        as P
 
 handleClient :: Server -> ClientConn -> IO ()
-handleClient server@(Server stateVar) clientConn = do
+handleClient server@(Server{stateVar, db}) clientConn = do
     myChan <- newTChanIO
     pubChan <- atomically $ do
         st <- readTVar stateVar
@@ -37,7 +38,7 @@ handleClient server@(Server stateVar) clientConn = do
   where
     useClient clientChan clientId = forever $ do
         msg <- recvMsg clientConn
-        atomically $ handleClientMsg server clientId clientChan msg
+        handleClientMsg server clientId clientChan msg
     teardownClient clientId = atomically $ do
         modifyTVar' stateVar $ \st -> st
             { clients = M.delete clientId (clients st)
@@ -58,7 +59,7 @@ handleClient server@(Server stateVar) clientConn = do
         pure clientId
 
 refreshBg :: Server -> IO ()
-refreshBg server@(Server stateVar) = atomically $ do
+refreshBg server@(Server{stateVar}) = atomically $ do
     st <- readTVar stateVar
     let newBgCount = bgCount st + 1
     writeTVar stateVar st { bgCount = newBgCount }
@@ -69,34 +70,39 @@ handleClientMsg
     -> P.ID P.Client
     -> TChan P.ServerMsg
     -> P.ClientMsg
-    -> STM ()
-handleClientMsg server@(Server stateVar) clientId clientChan msg =
+    -> IO ()
+handleClientMsg server@(Server{stateVar, db}) clientId clientChan msg =
     case msg of
-        P.MoveUnit motion@P.UnitMotion{unitId, loc} -> do
+        P.MoveUnit motion@P.UnitMotion{unitId, loc} -> atomically $ do
             modifyTVar' stateVar $
                 alterUnit unitId $ fmap $ \unit -> (unit {P.loc = loc} :: P.UnitInfo)
             broadcast server (P.UnitMoved motion)
-        P.AddUnit{loc, name, localId} -> do
+        P.AddUnit{loc, name, localId} -> atomically $ do
             let id = P.UnitId {clientId, localId}
             let unitInfo = P.UnitInfo { id, loc, name }
             modifyTVar' stateVar $
                 alterUnit id $ \_ -> Just unitInfo
             broadcast server (P.UnitAdded unitInfo)
         P.SetGridSize size -> do
-            modifyTVar' stateVar $
-                \st@ServerState{grid} -> st { grid = grid { size } }
-            broadcast server $ P.GridSizeChanged size
+            atomically $ do
+                modifyTVar' stateVar $
+                    \st@ServerState{grid} -> st { grid = grid { size } }
+                broadcast server $ P.GridSizeChanged size
+            DB.setGridSize db size
 
 alterUnit :: P.UnitId -> (Maybe P.UnitInfo -> Maybe P.UnitInfo) -> ServerState -> ServerState
 alterUnit id f st@ServerState{grid = g@GridState{units}} =
     st { grid = g { units = M.alter f id units } }
 
 broadcast :: Server -> P.ServerMsg -> STM ()
-broadcast (Server stateVar) msg = do
+broadcast (Server{stateVar}) msg = do
     ch <- broadcastChan <$> readTVar stateVar
     writeTChan ch msg
 
-newtype Server = Server (TVar ServerState)
+data Server = Server
+    { stateVar :: TVar ServerState
+    , db       :: DB.Conn
+    }
 
 data GridState = GridState
     { units :: M.Map P.UnitId P.UnitInfo
@@ -116,19 +122,19 @@ data ClientConn = ClientConn
     , recvMsg :: IO P.ClientMsg
     }
 
-newServer :: IO Server
-newServer = atomically $ do
-    ch <- newBroadcastTChan
-    Server <$> newTVar ServerState
-        { grid = GridState
-            { units = M.empty
-            , size = P.Point
-                { x = 10
-                , y = 10
+newServer :: DB.Conn -> IO Server
+newServer db = do
+    size <- DB.getGridSize db
+    atomically $ do
+        ch <- newBroadcastTChan
+        stateVar <- newTVar ServerState
+            { grid = GridState
+                { units = M.empty
+                , size
                 }
+            , bgCount = 0
+            , nextClientId = 0
+            , clients = M.empty
+            , broadcastChan = ch
             }
-        , bgCount = 0
-        , nextClientId = 0
-        , clients = M.empty
-        , broadcastChan = ch
-        }
+        pure Server{stateVar, db}
