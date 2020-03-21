@@ -6,7 +6,7 @@ import File exposing (File)
 import File.Select
 import Grid
 import Html exposing (..)
-import Html.Attributes exposing (for, href, name, src, style, type_, value)
+import Html.Attributes exposing (for, href, name, placeholder, src, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Layer
@@ -321,6 +321,7 @@ viewGridSettings { x, y } =
             "height"
             "Grid height"
             [ type_ "number"
+            , placeholder (String.fromInt y)
             , onInput SetGridHeight
             ]
             []
@@ -328,6 +329,7 @@ viewGridSettings { x, y } =
             "width"
             "Grid width"
             [ type_ "number"
+            , placeholder (String.fromInt x)
             , onInput SetGridWidth
             ]
             []
