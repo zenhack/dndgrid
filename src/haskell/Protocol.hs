@@ -11,6 +11,8 @@ module Protocol
     , ID(..)
     , ServerMsg(..)
     , Client(..)
+    , GridInfo(..)
+    , Image(..)
     , LocalUnit(..)
     , UnitMotion(..)
     , UnitId(..)
@@ -28,12 +30,15 @@ import Network.WebSockets (WebSocketsData(..))
 import qualified Data.Aeson     as Aeson
 import qualified Data.Text.Lazy as LT
 
+import qualified Web.Scotty as Sc
 
-newtype ID a = ID Int
-    deriving(Show, Read, Eq, Ord, Bounded, FromJSON, ToJSON, Num)
+
+newtype ID a = ID Int64
+    deriving(Show, Read, Eq, Ord, Bounded, FromJSON, ToJSON, Num, Sc.Parsable)
 
 data Client
 data LocalUnit
+data Image
 
 data Point = Point { x :: !Int, y :: !Int }
     deriving(Show, Read, Eq, Ord, Generic)
@@ -67,17 +72,24 @@ instance WebSocketsData (Maybe ClientMsg) where
     fromLazyByteString = Aeson.decode
     fromDataMessage = Aeson.decode . fromDataMessage
 
+data GridInfo = GridInfo
+    { bgImg :: !(ID Image)
+    , size  :: Point
+    }
+    deriving(Show, Read, Eq, Ord, Generic)
+instance ToJSON GridInfo
+instance FromJSON GridInfo
+
 -- messages sent from the server to the client.
 data ServerMsg
     = Welcome
         { yourClientId :: !(ID Client)
         , unitInfo     :: [UnitInfo]
-        , bgImg        :: !Int
-        , gridSize     :: Point
+        , grid         :: GridInfo
         }
     | UnitMoved UnitMotion
     | UnitAdded UnitInfo
-    | RefreshBg !Int
+    | RefreshBg !(ID Image)
     | GridSizeChanged Point
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ServerMsg

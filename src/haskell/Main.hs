@@ -38,6 +38,11 @@ makeScottyApp db server = Sc.scottyApp $ do
         liftIO $ do
             DB.setGridBg db bytes
             refreshBg server
+    Sc.get "/img/:id/img.png" $ do
+        imgId <- Sc.param "id"
+        bytes <- liftIO $ DB.getImage db imgId
+        Sc.setHeader "Content-Type" "image/png"
+        Sc.raw bytes
     Sc.get "/bg/:junk/bg.png" $ do
         result <- liftIO $ DB.getGridBg db
         Sc.setHeader "Content-Type" "image/png"

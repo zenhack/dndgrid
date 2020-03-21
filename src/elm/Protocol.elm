@@ -1,6 +1,7 @@
 module Protocol exposing
     ( ClientMsg(..)
     , Error(..)
+    , GridInfo
     , Point
     , ServerMsg(..)
     , UnitId
@@ -66,8 +67,13 @@ type ServerMsg
 type alias WelcomeMsg =
     { yourClientId : Int
     , unitInfo : List UnitInfo
-    , bgImg : Int
-    , gridSize : Point
+    , grid : GridInfo
+    }
+
+
+type alias GridInfo =
+    { bgImg : Int
+    , size : Point
     }
 
 
@@ -145,11 +151,10 @@ decodeServerMsg =
                 case tag of
                     "Welcome" ->
                         D.map Welcome <|
-                            D.map4 WelcomeMsg
+                            D.map3 WelcomeMsg
                                 (D.field "yourClientId" D.int)
                                 (D.field "unitInfo" (D.list decodeUnitInfo))
-                                (D.field "bgImg" D.int)
-                                (D.field "gridSize" decodePoint)
+                                (D.field "grid" decodeGridInfo)
 
                     "UnitMoved" ->
                         D.map UnitMoved (D.field "contents" decodeUnitMotion)
@@ -166,6 +171,12 @@ decodeServerMsg =
                     _ ->
                         D.fail <| "unknown tag: " ++ tag
             )
+
+
+decodeGridInfo =
+    D.map2 GridInfo
+        (D.field "bgImg" D.int)
+        (D.field "size" decodePoint)
 
 
 decodeUnitInfo : D.Decoder UnitInfo

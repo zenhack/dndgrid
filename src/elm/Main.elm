@@ -91,8 +91,7 @@ type alias ReadyModel =
         , img : Maybe File
         }
     , clientId : Int
-    , bgImg : Int
-    , gridSize : Protocol.Point
+    , grid : Protocol.GridInfo
     , zoom : Float
     }
 
@@ -189,7 +188,7 @@ viewTabs m =
         , div []
             (List.map (\( t, v ) -> viewTabContents m.tabId t (centeredX v))
                 [ ( AddUnit, viewAddUnit )
-                , ( GridSettings, viewGridSettings m.gridSize )
+                , ( GridSettings, viewGridSettings m.grid )
                 ]
                 |> List.concat
             )
@@ -202,8 +201,8 @@ viewGrid m =
         cells =
             Grid.fromFunction
                 (viewCell m.zoom Layer.gridPassive (div [] []))
-                m.gridSize.x
-                m.gridSize.y
+                m.grid.size.x
+                m.grid.size.y
 
         cellButtons =
             case m.currentUnit of
@@ -220,8 +219,8 @@ viewGrid m =
                                 x
                                 y
                         )
-                        m.gridSize.x
-                        m.gridSize.y
+                        m.grid.size.x
+                        m.grid.size.y
                         |> .items
 
         units =
@@ -237,12 +236,12 @@ viewGrid m =
             }
     in
     Grid.view
-        (bgAttrs m.gridSize m.bgImg)
+        (bgAttrs m.grid)
         grid
 
 
-bgAttrs : Protocol.Point -> Int -> List (Attribute msg)
-bgAttrs gridSize bgImg =
+bgAttrs : Protocol.GridInfo -> List (Attribute msg)
+bgAttrs { bgImg } =
     [ style "background-image" <| "url(\"/bg/" ++ String.fromInt bgImg ++ "/bg.png\")"
     , style "background-size" "contain"
     , style "background-repeat" "no-repeat"
@@ -313,15 +312,15 @@ viewAddUnit =
         ]
 
 
-viewGridSettings : Protocol.Point -> Html Msg
-viewGridSettings { x, y } =
+viewGridSettings : Protocol.GridInfo -> Html Msg
+viewGridSettings { size } =
     tblForm []
         [ h1 [] [ text "Grid Settings" ]
         , labeled input
             "height"
             "Grid height"
             [ type_ "number"
-            , placeholder (String.fromInt y)
+            , placeholder (String.fromInt size.y)
             , onInput SetGridHeight
             ]
             []
@@ -329,7 +328,7 @@ viewGridSettings { x, y } =
             "width"
             "Grid width"
             [ type_ "number"
-            , placeholder (String.fromInt x)
+            , placeholder (String.fromInt size.x)
             , onInput SetGridWidth
             ]
             []
@@ -405,12 +404,15 @@ setGridSize str m updateSize =
 
             else
                 let
-                    newSize =
-                        updateSize n m.gridSize
+                    grid =
+                        m.grid
+
+                    newGrid =
+                        { grid | size = updateSize n grid.size }
                 in
-                ( Ready { m | gridSize = newSize }
+                ( Ready { m | grid = newGrid }
                 , Protocol.send <|
-                    Protocol.SetGridSize newSize
+                    Protocol.SetGridSize newGrid.size
                 )
 
 
@@ -568,7 +570,7 @@ update msg model =
 applyServerMsg : Protocol.ServerMsg -> Model -> ( Model, Cmd Msg )
 applyServerMsg msg model =
     case ( msg, model ) of
-        ( Protocol.Welcome { yourClientId, unitInfo, bgImg, gridSize }, _ ) ->
+        ( Protocol.Welcome { yourClientId, unitInfo, grid }, _ ) ->
             ( Ready
                 { currentUnit = Nothing
                 , tabId = Nothing
@@ -587,8 +589,7 @@ applyServerMsg msg model =
                     , img = Nothing
                     }
                 , clientId = yourClientId
-                , bgImg = bgImg
-                , gridSize = gridSize
+                , grid = grid
                 , zoom = 1
                 }
             , Cmd.none
@@ -598,12 +599,20 @@ applyServerMsg msg model =
             Debug.log "Unexpected message" ( NeedWelcome, Cmd.none )
 
         ( Protocol.RefreshBg bg, Ready m ) ->
-            ( Ready { m | bgImg = bg }
+            let
+                grid =
+                    m.grid
+            in
+            ( Ready { m | grid = { grid | bgImg = bg } }
             , Cmd.none
             )
 
         ( Protocol.GridSizeChanged sz, Ready m ) ->
-            ( Ready { m | gridSize = sz }
+            let
+                grid =
+                    m.grid
+            in
+            ( Ready { m | grid = { grid | size = sz } }
             , Cmd.none
             )
 

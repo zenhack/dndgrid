@@ -51,8 +51,10 @@ handleClient server@(Server{stateVar, db}) clientConn = do
             , clients = M.insert clientId clientChan (clients st)
             }
         writeTChan clientChan P.Welcome
-            { P.bgImg = bgCount st
-            , P.gridSize = size (grid st)
+            { P.grid = P.GridInfo
+                { P.bgImg = bgCount st
+                , P.size = size (grid st)
+                }
             , P.yourClientId = clientId
             , P.unitInfo = M.elems $ units $ grid st
             }
@@ -111,7 +113,7 @@ data GridState = GridState
 
 data ServerState = ServerState
     { grid          :: GridState
-    , bgCount       :: !Int
+    , bgCount       :: !(P.ID P.Image)
     , nextClientId  :: !(P.ID P.Client)
     , clients       :: M.Map (P.ID P.Client) (TChan P.ServerMsg)
     , broadcastChan :: TChan P.ServerMsg
