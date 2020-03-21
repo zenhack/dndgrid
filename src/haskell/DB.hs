@@ -5,6 +5,8 @@ module DB
     , open
     , init
 
+    , getGridBg
+    , setGridBg
     , getGridSize
     , setGridSize
     ) where
@@ -16,7 +18,9 @@ import Control.Exception.Safe (throwString)
 import           Database.SQLite.Simple (NamedParam((:=)))
 import qualified Database.SQLite.Simple as SQL
 
-import Text.Heredoc (here)
+import qualified Data.ByteString.Lazy as LBS
+
+import Text.Heredoc (here, there)
 
 import Protocol (Point(..))
 
@@ -45,6 +49,34 @@ init (Conn c) =
             |]
 
 
+oneResult :: IO [a] -> IO a
+oneResult m = m >>= \rs -> case rs of
+    [r] -> pure r
+    _ -> throwString $ "Error: expected exactly one result but got " <> show (length rs)
+
+
+setGridBg :: Conn -> LBS.ByteString -> IO ()
+setGridBg (Conn c) bytes =
+    SQL.executeNamed c
+        [here|
+            UPDATE grids
+            SET bg_image = :bg_image
+            WHERE id = 0
+        |]
+        [ ":bg_image" := bytes ]
+
+
+getGridBg :: Conn -> IO (Maybe LBS.ByteString)
+getGridBg (Conn c) = do
+    SQL.Only bytes <- oneResult $ SQL.query_ c
+        [here|
+            SELECT bg_image
+            FROM grids
+            WHERE id = 0
+        |]
+    pure bytes
+
+
 setGridSize :: Conn -> Point -> IO ()
 setGridSize (Conn c) Protocol.Point{x, y} =
     SQL.executeNamed c
@@ -57,14 +89,13 @@ setGridSize (Conn c) Protocol.Point{x, y} =
         , ":width" := x
         ]
 
+
 getGridSize :: Conn -> IO Point
 getGridSize (Conn c) = do
-    rs <- SQL.query_ c
+    (x, y) <- oneResult $ SQL.query_ c
         [here|
             SELECT width, height
             FROM grids
             WHERE id = 0
         |]
-    case rs of
-        [(x, y)] -> pure Point{x, y}
-        _ -> throwString "Grid not found. Has the DB been initialized?"
+    pure Point{x, y}

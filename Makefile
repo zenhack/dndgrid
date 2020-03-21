@@ -8,7 +8,7 @@ all: build/dndgrid.js build/dndgrid
 dev: all
 	spk dev
 run: all
-	./start.sh
+	./build/dndgrid
 pack: dndgrid.spk
 
 build/.mkdir:

@@ -27,21 +27,23 @@ staticFiles =
     , ("/setup.js", "static/setup.js", "application/javascript")
     ]
 
-makeScottyApp :: FilePath -> Server -> IO Application
-makeScottyApp bgPath server = Sc.scottyApp $ do
+makeScottyApp :: DB.Conn -> Server -> IO Application
+makeScottyApp db server = Sc.scottyApp $ do
     for_ staticFiles $ \(url, filePath, contentType) ->
         Sc.get url $ do
             Sc.setHeader "Content-Type" contentType
             Sc.file filePath
     Sc.post "/new-bg" $ do
         bytes <- Sc.body
-        liftIO $ withBinaryFile bgPath WriteMode $ \handle ->
-            -- TODO: atomic rename.
-            LBS.hPut handle bytes
-        liftIO $ refreshBg server
+        liftIO $ do
+            DB.setGridBg db bytes
+            refreshBg server
     Sc.get "/bg/:junk/bg.png" $ do
+        result <- liftIO $ DB.getGridBg db
         Sc.setHeader "Content-Type" "image/png"
-        Sc.file bgPath
+        case result of
+            Just bytes -> Sc.raw bytes
+            Nothing    -> Sc.file "default-bg.png"
 
 wsApp :: Server -> Ws.ServerApp
 wsApp server pending = do
@@ -60,14 +62,12 @@ wsApp server pending = do
 
 makeApp :: IO Application
 makeApp = do
-    bgPath <- getEnv "BG_FILE_PATH"
-
     dbPath <- getEnv "DB_PATH"
     db <- DB.open dbPath
     DB.init db
 
     server <- newServer db
-    scottyApp <- makeScottyApp bgPath server
+    scottyApp <- makeScottyApp db server
     pure $ WaiWs.websocketsOr
         Ws.defaultConnectionOptions
         (wsApp server)
