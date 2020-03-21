@@ -31,7 +31,6 @@ init (Conn c) =
         -- Create a 10x10 grid:
         SQL.execute_ c
             [here|
-                INSERT INTO grids(id, height, width)
+                INSERT OR IGNORE INTO grids(id, height, width)
                 VALUES (0, 10, 10)
-                ON CONFLICT IGNORE
             |]

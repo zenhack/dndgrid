@@ -15,6 +15,8 @@ import Control.Exception.Safe (throwString)
 import Network.Wai            (Application)
 import System.Environment     (getEnv)
 
+import qualified DB
+
 import Protocol ()
 import ServerLogic
 
@@ -59,6 +61,11 @@ wsApp server pending = do
 makeApp :: IO Application
 makeApp = do
     bgPath <- getEnv "BG_FILE_PATH"
+
+    dbPath <- getEnv "DB_PATH"
+    db <- DB.open dbPath
+    DB.init db
+
     server <- newServer
     scottyApp <- makeScottyApp bgPath server
     pure $ WaiWs.websocketsOr
