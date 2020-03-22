@@ -13,6 +13,7 @@ import Layer
 import Protocol
 import Svg exposing (svg)
 import Svg.Attributes exposing (height, viewBox, width)
+import Task
 
 
 
@@ -52,6 +53,7 @@ type Msg
     | DeployUnit
     | GotServerMsg (Result Protocol.Error Protocol.ServerMsg)
     | SelectedImg ImgPurpose File
+    | GotLocalUnitImgUrl File String
     | UploadBgResult (Maybe Http.Error)
     | RequestImg ImgPurpose
     | SetGridWidth String
@@ -85,14 +87,21 @@ type alias ReadyModel =
     { currentUnit : Maybe UnitID
     , units : Dict UnitID Unit
     , tabId : Maybe TabId
-    , nextUnit :
-        { id : Int
-        , name : String
-        , img : Maybe File
-        }
+    , nextUnit : NextUnitState
     , clientId : Int
     , grid : Protocol.GridInfo
     , zoom : Float
+    }
+
+
+type alias NextUnitState =
+    { id : Int
+    , name : String
+    , img :
+        Maybe
+            { file : File
+            , dataUrl : Maybe String
+            }
     }
 
 
@@ -187,7 +196,7 @@ viewTabs m =
                 ]
         , div []
             (List.map (\( t, v ) -> viewTabContents m.tabId t (centeredX v))
-                [ ( AddUnit, viewAddUnit )
+                [ ( AddUnit, viewAddUnit m )
                 , ( GridSettings, viewGridSettings m.grid )
                 ]
                 |> List.concat
@@ -307,14 +316,34 @@ viewTabContents selected rendering output =
         []
 
 
-viewAddUnit : Html Msg
-viewAddUnit =
-    tblForm []
-        [ h1 [] [ text "Add Unit" ]
-        , labeled input "name" "Name" [ onInput SetUnitName ] []
-        , labeled button "image" "Image" [ onClick (RequestImg UnitSprite) ] [ text "Choose..." ]
-        , button [ onClick DeployUnit ] [ text "Add" ]
-        ]
+viewAddUnit : { a | nextUnit : NextUnitState, zoom : Float } -> Html Msg
+viewAddUnit { nextUnit, zoom } =
+    tblForm [] <|
+        List.concat
+            [ [ h1 [] [ text "Add Unit" ]
+              , labeled input "name" "Name" [ onInput SetUnitName ] []
+              ]
+            , nextUnit.img
+                |> Maybe.andThen .dataUrl
+                |> Maybe.map
+                    (\url ->
+                        let
+                            size =
+                                zoomPx zoom
+                        in
+                        [ img
+                            [ src url
+                            , style "height" size
+                            , style "width" size
+                            ]
+                            []
+                        ]
+                    )
+                |> Maybe.withDefault []
+            , [ labeled button "image" "Image" [ onClick (RequestImg UnitSprite) ] [ text "Choose..." ]
+              , button [ onClick DeployUnit ] [ text "Add" ]
+              ]
+            ]
 
 
 viewGridSettings : Protocol.GridInfo -> Html Msg
@@ -548,7 +577,37 @@ update msg model =
                 nextUnit =
                     m.nextUnit
             in
-            ( Ready { m | nextUnit = { nextUnit | img = Just file } }
+            ( Ready
+                { m
+                    | nextUnit =
+                        { nextUnit
+                            | img =
+                                Just
+                                    { file = file
+                                    , dataUrl = Nothing
+                                    }
+                        }
+                }
+            , File.toUrl file
+                |> Task.perform (GotLocalUnitImgUrl file)
+            )
+
+        ( GotLocalUnitImgUrl file url, Ready m ) ->
+            let
+                nextUnit =
+                    m.nextUnit
+            in
+            ( Ready
+                { m
+                    | nextUnit =
+                        { nextUnit
+                            | img =
+                                Just
+                                    { file = file
+                                    , dataUrl = Just url
+                                    }
+                        }
+                }
             , Cmd.none
             )
 
