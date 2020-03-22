@@ -22,15 +22,20 @@ module Protocol
 
 import Zhp
 
+import Prelude (fail)
+
 import Data.Aeson   (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
 import Network.WebSockets (WebSocketsData(..))
 
-import qualified Data.Aeson     as Aeson
-import qualified Data.Text.Lazy as LT
-
-import qualified Web.Scotty as Sc
+import qualified Data.Aeson                  as Aeson
+import qualified Data.ByteString.Base64.Lazy as Base64
+import qualified Data.ByteString.Lazy        as LBS
+import qualified Data.ByteString.Lazy.Char8  as LBS8
+import qualified Data.Text                   as T
+import qualified Data.Text.Lazy              as LT
+import qualified Web.Scotty                  as Sc
 
 
 newtype ID a = ID Int
@@ -49,14 +54,36 @@ instance FromJSON Point
 data ClientMsg
     = MoveUnit UnitMotion
     | AddUnit
-        { localId :: !(ID LocalUnit)
-        , name    :: LT.Text
-        , loc     :: Point
+        { localId   :: !(ID LocalUnit)
+        , name      :: LT.Text
+        , loc       :: Point
+        , imageData :: Base64LBS
         }
     | SetGridSize Point
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ClientMsg
 instance FromJSON ClientMsg
+
+newtype Base64LBS
+    = Base64LBS LBS.ByteString
+    deriving(Show, Read, Eq, Ord, Generic)
+
+instance ToJSON Base64LBS where
+    toJSON (Base64LBS lbs) =
+        Base64.encode lbs
+        & LBS8.unpack
+        & LT.pack
+        & Aeson.toJSON
+
+instance FromJSON Base64LBS where
+    parseJSON (Aeson.String txt) =
+        T.unpack txt
+        & LBS8.pack
+        & Base64.decodeLenient
+        & Base64LBS
+        & pure
+    parseJSON _ =
+        fail "Expected (base64) string"
 
 data UnitMotion = UnitMotion
     { unitId :: !UnitId

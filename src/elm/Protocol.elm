@@ -16,6 +16,8 @@ module Protocol exposing
 {-| Support for the communication protocol between clients and servers.
 -}
 
+import Base64
+import Bytes exposing (Bytes)
 import File exposing (File)
 import Http
 import Json.Decode as D
@@ -46,6 +48,7 @@ type ClientMsg
         { localId : Int
         , name : String
         , loc : Point
+        , imageData : Bytes
         }
     | SetGridSize Point
 
@@ -102,12 +105,13 @@ encodeClientMsg msg =
                 , ( "contents", encodeUnitMotion motion )
                 ]
 
-        AddUnit { localId, name, loc } ->
+        AddUnit { localId, name, loc, imageData } ->
             E.object
                 [ ( "tag", E.string "AddUnit" )
                 , ( "localId", E.int localId )
                 , ( "name", E.string name )
                 , ( "loc", encodePoint loc )
+                , ( "bytes", encodeBytes imageData )
                 ]
 
         SetGridSize sz ->
@@ -115,6 +119,16 @@ encodeClientMsg msg =
                 [ ( "tag", E.string "SetGridSize" )
                 , ( "contents", encodePoint sz )
                 ]
+
+
+encodeBytes : Bytes -> E.Value
+encodeBytes =
+    Base64.fromBytes
+        -- Base64.fromBytes returns a Maybe, but per the docs it can't
+        -- this is due to an implementation detail and it can't actually
+        -- return nothing. So just pick an arbitrary default:
+        >> Maybe.withDefault "IMPOSSIBLE"
+        >> E.string
 
 
 encodeUnitMotion { unitId, loc } =

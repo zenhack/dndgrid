@@ -7,7 +7,7 @@ import File exposing (File)
 import File.Select
 import Grid
 import Html exposing (..)
-import Html.Attributes exposing (for, href, name, placeholder, src, style, type_, value)
+import Html.Attributes exposing (disabled, for, href, name, placeholder, src, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Layer
@@ -54,17 +54,20 @@ type Msg
     | DeployUnit
     | GotServerMsg (Result Protocol.Error Protocol.ServerMsg)
     | SelectedImg ImgPurpose File
-    | GotLocalUnitImgData
-        { file : File
-        , url : String
-        , bytes : Bytes
-        }
+    | GotLocalUnitImgData UnitImgData
     | UploadBgResult (Maybe Http.Error)
     | RequestImg ImgPurpose
     | SetGridWidth String
     | SetGridHeight String
     | SetZoom String
     | SetTab TabId
+
+
+type alias UnitImgData =
+    { file : File
+    , url : String
+    , bytes : Bytes
+    }
 
 
 type ImgPurpose
@@ -325,15 +328,34 @@ viewTabContents selected rendering output =
         []
 
 
+getUnitImgData : NextUnitState -> Maybe UnitImgData
+getUnitImgData { img } =
+    img
+        |> Maybe.andThen
+            (\{ file, data } ->
+                data
+                    |> Maybe.map
+                        (\{ url, bytes } ->
+                            { file = file
+                            , url = url
+                            , bytes = bytes
+                            }
+                        )
+            )
+
+
 viewAddUnit : { a | nextUnit : NextUnitState, zoom : Float } -> Html Msg
 viewAddUnit { nextUnit, zoom } =
+    let
+        imgData =
+            getUnitImgData nextUnit
+    in
     tblForm [] <|
         List.concat
             [ [ h1 [] [ text "Add Unit" ]
               , labeled input "name" "Name" [ onInput SetUnitName ] []
               ]
-            , nextUnit.img
-                |> Maybe.andThen .data
+            , imgData
                 |> Maybe.map
                     (\{ url } ->
                         let
@@ -350,7 +372,18 @@ viewAddUnit { nextUnit, zoom } =
                     )
                 |> Maybe.withDefault []
             , [ labeled button "image" "Image" [ onClick (RequestImg UnitSprite) ] [ text "Choose..." ]
-              , button [ onClick DeployUnit ] [ text "Add" ]
+              , button
+                    [ onClick DeployUnit
+                    , disabled
+                        (case imgData of
+                            Nothing ->
+                                True
+
+                            Just _ ->
+                                False
+                        )
+                    ]
+                    [ text "Add" ]
               ]
             ]
 
@@ -529,12 +562,22 @@ update msg model =
                             , img = Nothing
                             }
                     }
-                , Protocol.send <|
-                    Protocol.AddUnit
-                        { localId = m.nextUnit.id
-                        , name = m.nextUnit.name
-                        , loc = loc
-                        }
+                , case getUnitImgData m.nextUnit of
+                    Just { bytes } ->
+                        Protocol.send <|
+                            Protocol.AddUnit
+                                { localId = m.nextUnit.id
+                                , name = m.nextUnit.name
+                                , loc = loc
+                                , imageData = bytes
+                                }
+
+                    Nothing ->
+                        -- The only way this can happen if the user somehow
+                        -- clicked the 'Add Unit' before the image data was
+                        -- ready. But in that case the button should be
+                        -- disabled.
+                        Cmd.none
                 )
 
         ( SetUnitName name, Ready m ) ->

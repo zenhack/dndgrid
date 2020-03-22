@@ -7,6 +7,7 @@
     "dependencies": {
         "direct": {
             "bburdette/websocket": "1.0.3",
+            "danfishgold/base64-bytes": "1.0.3",
             "elm/browser": "1.0.2",
             "elm/bytes": "1.0.8",
             "elm/core": "1.0.5",

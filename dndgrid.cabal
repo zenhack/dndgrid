@@ -46,6 +46,7 @@ common shared-opts
       base ^>=4.13
     , aeson ^>=1.4.6
     , async ^>=2.2.2
+    , base64-bytestring ^>=1.0.0
     , bytestring ^>=0.10.10
     , containers ^>=0.6.2
     , extra ^>=1.7.1
