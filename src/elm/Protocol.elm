@@ -113,7 +113,7 @@ encodeClientMsg msg =
                 , ( "localId", E.int localId )
                 , ( "name", E.string name )
                 , ( "loc", encodePoint loc )
-                , ( "bytes", encodeBytes imageData )
+                , ( "imageData", encodeBytes imageData )
                 ]
 
         SetGridSize sz ->
