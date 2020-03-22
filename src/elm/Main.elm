@@ -1,6 +1,7 @@
 module Main exposing (main)
 
 import Browser
+import Bytes exposing (Bytes)
 import Dict exposing (Dict)
 import File exposing (File)
 import File.Select
@@ -53,7 +54,11 @@ type Msg
     | DeployUnit
     | GotServerMsg (Result Protocol.Error Protocol.ServerMsg)
     | SelectedImg ImgPurpose File
-    | GotLocalUnitImgUrl File String
+    | GotLocalUnitImgData
+        { file : File
+        , url : String
+        , bytes : Bytes
+        }
     | UploadBgResult (Maybe Http.Error)
     | RequestImg ImgPurpose
     | SetGridWidth String
@@ -100,7 +105,11 @@ type alias NextUnitState =
     , img :
         Maybe
             { file : File
-            , dataUrl : Maybe String
+            , data :
+                Maybe
+                    { url : String
+                    , bytes : Bytes
+                    }
             }
     }
 
@@ -324,9 +333,9 @@ viewAddUnit { nextUnit, zoom } =
               , labeled input "name" "Name" [ onInput SetUnitName ] []
               ]
             , nextUnit.img
-                |> Maybe.andThen .dataUrl
+                |> Maybe.andThen .data
                 |> Maybe.map
-                    (\url ->
+                    (\{ url } ->
                         let
                             size =
                                 zoomPx zoom
@@ -584,15 +593,26 @@ update msg model =
                             | img =
                                 Just
                                     { file = file
-                                    , dataUrl = Nothing
+                                    , data = Nothing
                                     }
                         }
                 }
             , File.toUrl file
-                |> Task.perform (GotLocalUnitImgUrl file)
+                |> Task.andThen
+                    (\url ->
+                        File.toBytes file
+                            |> Task.map
+                                (\bytes ->
+                                    { file = file
+                                    , url = url
+                                    , bytes = bytes
+                                    }
+                                )
+                    )
+                |> Task.perform GotLocalUnitImgData
             )
 
-        ( GotLocalUnitImgUrl file url, Ready m ) ->
+        ( GotLocalUnitImgData { file, url, bytes }, Ready m ) ->
             let
                 nextUnit =
                     m.nextUnit
@@ -604,7 +624,11 @@ update msg model =
                             | img =
                                 Just
                                     { file = file
-                                    , dataUrl = Just url
+                                    , data =
+                                        Just
+                                            { url = url
+                                            , bytes = bytes
+                                            }
                                     }
                         }
                 }
