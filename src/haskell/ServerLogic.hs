@@ -6,9 +6,9 @@
 module ServerLogic
     ( Server
     , ClientConn(..)
-    , refreshBg
     , newServer
     , handleClient
+    , setBg
     ) where
 
 import Zhp
@@ -17,9 +17,10 @@ import Control.Concurrent.Async (race_)
 import Control.Concurrent.STM
 import Control.Exception.Safe   (bracket)
 
-import qualified Data.Map.Strict as M
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Map.Strict      as M
 import qualified DB
-import qualified Protocol        as P
+import qualified Protocol             as P
 
 handleClient :: Server -> ClientConn -> IO ()
 handleClient server@(Server{stateVar, db}) clientConn = do
@@ -51,21 +52,17 @@ handleClient server@(Server{stateVar, db}) clientConn = do
             , clients = M.insert clientId clientChan (clients st)
             }
         writeTChan clientChan P.Welcome
-            { P.grid = P.GridInfo
-                { P.bgImg = bgCount st
-                , P.size = size (grid st)
-                }
+            { P.grid = settings (grid st)
             , P.yourClientId = clientId
             , P.unitInfo = M.elems $ units $ grid st
             }
         pure clientId
 
-refreshBg :: Server -> IO ()
-refreshBg server@(Server{stateVar}) = atomically $ do
-    st <- readTVar stateVar
-    let newBgCount = bgCount st + 1
-    writeTVar stateVar st { bgCount = newBgCount }
-    broadcast server $ P.RefreshBg $! newBgCount
+setBg :: LBS.ByteString -> Server -> IO ()
+setBg bytes server@(Server{db}) = do
+    -- FIXME: there's a race condition here.
+    imgId <- DB.setGridBg db bytes
+    atomically $ broadcast server $ P.RefreshBg imgId
 
 handleClientMsg
     :: Server
@@ -88,7 +85,10 @@ handleClientMsg server@(Server{stateVar, db}) clientId clientChan msg =
         P.SetGridSize size -> do
             atomically $ do
                 modifyTVar' stateVar $
-                    \st@ServerState{grid} -> st { grid = grid { size } }
+                    \st@ServerState{grid = grid@GridState{settings}} ->
+                        -- Lenses would make this nicer. Maybe at some point we can
+                        -- use microlens.
+                        st { grid = grid { settings = settings { P.size = size } } }
                 broadcast server $ P.GridSizeChanged size
             DB.setGridSize db size
 
@@ -107,13 +107,12 @@ data Server = Server
     }
 
 data GridState = GridState
-    { units :: M.Map P.UnitId P.UnitInfo
-    , size  :: P.Point
+    { units    :: M.Map P.UnitId P.UnitInfo
+    , settings :: P.GridInfo
     }
 
 data ServerState = ServerState
     { grid          :: GridState
-    , bgCount       :: !(P.ID P.Image)
     , nextClientId  :: !(P.ID P.Client)
     , clients       :: M.Map (P.ID P.Client) (TChan P.ServerMsg)
     , broadcastChan :: TChan P.ServerMsg
@@ -126,15 +125,14 @@ data ClientConn = ClientConn
 
 newServer :: DB.Conn -> IO Server
 newServer db = do
-    size <- DB.getGridSize db
+    gridInfo <- DB.getGrid db
     atomically $ do
         ch <- newBroadcastTChan
         stateVar <- newTVar ServerState
             { grid = GridState
-                { units = M.empty
-                , size
+                { settings = gridInfo
+                , units = M.empty
                 }
-            , bgCount = 0
             , nextClientId = 0
             , clients = M.empty
             , broadcastChan = ch

@@ -242,10 +242,15 @@ viewGrid m =
 
 bgAttrs : Protocol.GridInfo -> List (Attribute msg)
 bgAttrs { bgImg } =
-    [ style "background-image" <| "url(\"/bg/" ++ String.fromInt bgImg ++ "/bg.png\")"
-    , style "background-size" "contain"
-    , style "background-repeat" "no-repeat"
-    ]
+    case bgImg of
+        Nothing ->
+            []
+
+        Just imgId ->
+            [ style "background-image" <| "url(\"/img/" ++ String.fromInt imgId ++ "/img.png\")"
+            , style "background-size" "contain"
+            , style "background-repeat" "no-repeat"
+            ]
 
 
 labeled :
@@ -603,7 +608,7 @@ applyServerMsg msg model =
                 grid =
                     m.grid
             in
-            ( Ready { m | grid = { grid | bgImg = bg } }
+            ( Ready { m | grid = { grid | bgImg = Just bg } }
             , Cmd.none
             )
 

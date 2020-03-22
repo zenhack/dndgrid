@@ -35,20 +35,12 @@ makeScottyApp db server = Sc.scottyApp $ do
             Sc.file filePath
     Sc.post "/new-bg" $ do
         bytes <- Sc.body
-        liftIO $ do
-            DB.setGridBg db bytes
-            refreshBg server
+        liftIO $ setBg bytes server
     Sc.get "/img/:id/img.png" $ do
         imgId <- Sc.param "id"
         bytes <- liftIO $ DB.getImage db imgId
         Sc.setHeader "Content-Type" "image/png"
         Sc.raw bytes
-    Sc.get "/bg/:junk/bg.png" $ do
-        result <- liftIO $ DB.getGridBg db
-        Sc.setHeader "Content-Type" "image/png"
-        case result of
-            Just bytes -> Sc.raw bytes
-            Nothing    -> Sc.file "default-bg.png"
 
 wsApp :: Server -> Ws.ServerApp
 wsApp server pending = do

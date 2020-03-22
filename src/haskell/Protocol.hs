@@ -33,7 +33,7 @@ import qualified Data.Text.Lazy as LT
 import qualified Web.Scotty as Sc
 
 
-newtype ID a = ID Int64
+newtype ID a = ID Int
     deriving(Show, Read, Eq, Ord, Bounded, FromJSON, ToJSON, Num, Sc.Parsable)
 
 data Client
@@ -73,7 +73,7 @@ instance WebSocketsData (Maybe ClientMsg) where
     fromDataMessage = Aeson.decode . fromDataMessage
 
 data GridInfo = GridInfo
-    { bgImg :: !(ID Image)
+    { bgImg :: Maybe (ID Image)
     , size  :: Point
     }
     deriving(Show, Read, Eq, Ord, Generic)

@@ -72,7 +72,7 @@ type alias WelcomeMsg =
 
 
 type alias GridInfo =
-    { bgImg : Int
+    { bgImg : Maybe Int
     , size : Point
     }
 
@@ -175,7 +175,7 @@ decodeServerMsg =
 
 decodeGridInfo =
     D.map2 GridInfo
-        (D.field "bgImg" D.int)
+        (D.field "bgImg" (D.nullable D.int))
         (D.field "size" decodePoint)
 
 

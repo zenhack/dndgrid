@@ -8,6 +8,7 @@ module DB
     , getImage
     , saveImage
 
+    , getGrid
     , getGridBg
     , setGridBg
     , getGridSize
@@ -66,14 +67,19 @@ oneResult m = m >>= \rs -> case rs of
 
 saveImage :: Conn -> LBS.ByteString -> IO (P.ID P.Image)
 saveImage (Conn c) bytes =
-    SQL.withTransaction c $ do
-        SQL.executeNamed c
-            [here|
-                INSERT INTO images(img_data)
-                VALUES (:bytes)
-            |]
-            [ ":bytes" := bytes ]
-        P.ID <$> SQL.lastInsertRowId c
+    SQL.withTransaction c $ saveImageNoTx (Conn c) bytes
+
+-- Non transactional version of saveImage, because sqlite doesn't do nested
+-- transactions, and we need to call this from other functions here.
+saveImageNoTx :: Conn -> LBS.ByteString -> IO (P.ID P.Image)
+saveImageNoTx (Conn c) bytes = do
+    SQL.executeNamed c
+        [here|
+            INSERT INTO images(img_data)
+            VALUES (:bytes)
+        |]
+        [ ":bytes" := bytes ]
+    P.ID . fromIntegral <$> SQL.lastInsertRowId c
 
 
 
@@ -89,15 +95,18 @@ getImage (Conn c) (P.ID imgId) = do
     pure bytes
 
 
-setGridBg :: Conn -> LBS.ByteString -> IO ()
-setGridBg (Conn c) bytes =
-    SQL.executeNamed c
-        [here|
-            UPDATE grids
-            SET bg_image = :bg_image
-            WHERE id = 0
-        |]
-        [ ":bg_image" := bytes ]
+setGridBg :: Conn -> LBS.ByteString -> IO (P.ID P.Image)
+setGridBg conn@(Conn c) bytes =
+    SQL.withTransaction c $ do
+        ret@(P.ID imgId) <- saveImageNoTx conn bytes
+        SQL.executeNamed c
+            [here|
+                UPDATE grids
+                SET bg_image = :bg_image
+                WHERE id = 0
+            |]
+            [ ":bg_image" := imgId ]
+        pure ret
 
 
 getGrid :: Conn -> IO P.GridInfo
@@ -109,7 +118,7 @@ getGrid (Conn c) = do
             WHERE id = 0
         |]
     pure P.GridInfo
-        { P.bgImg = P.ID bgImg
+        { P.bgImg = fmap P.ID bgImg
         , P.size = P.Point { P.x = w, P.y = h }
         }
 
