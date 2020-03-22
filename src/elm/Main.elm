@@ -78,6 +78,7 @@ type ImgPurpose
 type alias Unit =
     { loc : Protocol.Point
     , name : String
+    , image : Int
     }
 
 
@@ -138,16 +139,32 @@ zoomPx zoom =
     String.fromInt (floor (zoom * cellSizePx)) ++ "px"
 
 
-unitGridItem : ( UnitID, Unit ) -> Grid.GridItem (Html Msg)
-unitGridItem ( id, { loc, name } ) =
+unitGridItem : Float -> ( UnitID, Unit ) -> Grid.GridItem (Html Msg)
+unitGridItem zoom ( id, { loc, name, image } ) =
+    let
+        imgSize =
+            zoomPx zoom
+    in
     { item =
         centered <|
-            a
-                [ href "#"
-                , onClick (ChooseUnit id)
+            div
+                [ style "width" <| imgSize
+                , style "height" <| imgSize
                 , Layer.layer Layer.units
                 ]
-                [ text name ]
+                [ a
+                    [ href "#"
+                    , onClick (ChooseUnit id)
+                    ]
+                    [ img
+                        [ src <| Protocol.imageUrl image
+                        , style "max-width" <| imgSize
+                        , style "max-height" <| imgSize
+                        ]
+                        []
+                    , text name
+                    ]
+                ]
     , loc =
         { x = loc.x
         , y = loc.y
@@ -246,7 +263,7 @@ viewGrid m =
 
         units =
             Dict.toList m.units
-                |> List.map unitGridItem
+                |> List.map (unitGridItem m.zoom)
 
         grid =
             { cells
@@ -550,11 +567,7 @@ update msg model =
                         | tabId = Nothing
                         , currentUnit =
                             Just unitId
-                        , units =
-                            Dict.insert
-                                unitId
-                                { loc = loc, name = m.nextUnit.name }
-                                m.units
+                        , units = m.units
                         , nextUnit =
                             { id =
                                 m.nextUnit.id + 1
@@ -708,9 +721,12 @@ applyServerMsg msg model =
                 , units =
                     unitInfo
                         |> List.map
-                            (\{ loc, name, id } ->
+                            (\{ loc, name, id, image } ->
                                 ( ( id.clientId, id.localId )
-                                , { loc = loc, name = name }
+                                , { loc = loc
+                                  , name = name
+                                  , image = image
+                                  }
                                 )
                             )
                         |> Dict.fromList
@@ -763,13 +779,13 @@ applyServerMsg msg model =
             , Cmd.none
             )
 
-        ( Protocol.UnitAdded { id, loc, name }, Ready m ) ->
+        ( Protocol.UnitAdded { id, loc, name, image }, Ready m ) ->
             ( Ready
                 { m
                     | units =
                         Dict.update
                             (unitIdFromProtocol id)
-                            (\_ -> Just { loc = loc, name = name })
+                            (\_ -> Just { loc = loc, name = name, image = image })
                             m.units
                 }
             , Cmd.none
