@@ -9,9 +9,7 @@ module DB
     , saveImage
 
     , getGrid
-    , getGridBg
     , setGridBg
-    , getGridSize
     , setGridSize
     ) where
 
@@ -122,16 +120,6 @@ getGrid (Conn c) = do
         , P.size = P.Point { P.x = w, P.y = h }
         }
 
-getGridBg :: Conn -> IO (Maybe LBS.ByteString)
-getGridBg (Conn c) = do
-    SQL.Only bytes <- oneResult $ SQL.query_ c
-        [here|
-            SELECT bg_image
-            FROM grids
-            WHERE id = 0
-        |]
-    pure bytes
-
 
 setGridSize :: Conn -> P.Point -> IO ()
 setGridSize (Conn c) P.Point{P.x, P.y} =
@@ -144,14 +132,3 @@ setGridSize (Conn c) P.Point{P.x, P.y} =
         [ ":height" := y
         , ":width" := x
         ]
-
-
-getGridSize :: Conn -> IO P.Point
-getGridSize (Conn c) = do
-    (x, y) <- oneResult $ SQL.query_ c
-        [here|
-            SELECT width, height
-            FROM grids
-            WHERE id = 0
-        |]
-    pure P.Point{P.x = x, P.y = y}
