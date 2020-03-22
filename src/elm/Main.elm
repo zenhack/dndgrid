@@ -297,7 +297,7 @@ labeled element inputName labelText attrs kids =
 
 tblForm : List (Attribute msg) -> List (Html msg) -> Html msg
 tblForm attrs kids =
-    form (style "display" "table" :: attrs) kids
+    div (style "display" "table" :: attrs) kids
 
 
 tabText : TabId -> String
