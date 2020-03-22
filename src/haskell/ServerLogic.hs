@@ -76,12 +76,14 @@ handleClientMsg server@(Server{stateVar, db}) clientId clientChan msg =
             modifyTVar' stateVar $
                 alterUnit unitId $ fmap $ \unit -> (unit {P.loc = loc} :: P.UnitInfo)
             broadcast server (P.UnitMoved motion)
-        P.AddUnit{loc, name, localId} -> atomically $ do
-            let id = P.UnitId {clientId, localId}
-            let unitInfo = P.UnitInfo { id, loc, name }
-            modifyTVar' stateVar $
-                alterUnit id $ \_ -> Just unitInfo
-            broadcast server (P.UnitAdded unitInfo)
+        P.AddUnit{loc, name, localId, imageData = P.Base64LBS bytes} -> do
+            image <- DB.saveImage db bytes
+            atomically $ do
+                let id = P.UnitId {clientId, localId}
+                let unitInfo = P.UnitInfo { id, loc, name, image }
+                modifyTVar' stateVar $
+                    alterUnit id $ \_ -> Just unitInfo
+                broadcast server (P.UnitAdded unitInfo)
         P.SetGridSize size -> do
             atomically $ do
                 modifyTVar' stateVar $

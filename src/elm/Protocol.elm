@@ -8,6 +8,7 @@ module Protocol exposing
     , UnitInfo
     , connect
     , disconnect
+    , imageUrl
     , recv
     , send
     , uploadBg
@@ -84,6 +85,7 @@ type alias UnitInfo =
     { id : UnitId
     , name : String
     , loc : Point
+    , image : Int
     }
 
 
@@ -195,10 +197,11 @@ decodeGridInfo =
 
 decodeUnitInfo : D.Decoder UnitInfo
 decodeUnitInfo =
-    D.map3 UnitInfo
+    D.map4 UnitInfo
         (D.field "id" decodeUnitId)
         (D.field "name" D.string)
         (D.field "loc" decodePoint)
+        (D.field "image" D.int)
 
 
 decodePoint : D.Decoder Point
@@ -288,3 +291,14 @@ disconnect : Cmd msg
 disconnect =
     WebSocket.send Ports.sendSocketCommand <|
         WebSocket.Close { name = "" }
+
+
+
+-- MISC
+
+
+{-| Get the URL of an image ID.
+-}
+imageUrl : Int -> String
+imageUrl id =
+    "/img/" ++ String.fromInt id ++ "/img.png"

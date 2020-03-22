@@ -17,6 +17,7 @@ module Protocol
     , UnitMotion(..)
     , UnitId(..)
     , UnitInfo(..)
+    , Base64LBS(..)
     ) where
 
 
@@ -129,9 +130,10 @@ instance WebSocketsData (Maybe ServerMsg) where
     fromDataMessage = Aeson.decode . fromDataMessage
 
 data UnitInfo = UnitInfo
-    { loc  :: Point
-    , id   :: UnitId
-    , name :: LT.Text
+    { loc   :: Point
+    , id    :: UnitId
+    , name  :: LT.Text
+    , image :: ID Image
     }
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON UnitInfo

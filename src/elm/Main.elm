@@ -268,7 +268,7 @@ bgAttrs { bgImg } =
             []
 
         Just imgId ->
-            [ style "background-image" <| "url(\"/img/" ++ String.fromInt imgId ++ "/img.png\")"
+            [ style "background-image" <| "url(\"" ++ Protocol.imageUrl imgId ++ "\")"
             , style "background-size" "contain"
             , style "background-repeat" "no-repeat"
             ]
