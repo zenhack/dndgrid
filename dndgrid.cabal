@@ -48,6 +48,7 @@ common shared-opts
     , async ^>=2.2.2
     , bytestring ^>=0.10.10
     , containers ^>=0.6.2
+    , extra ^>=1.7.1
     , heredoc ^>=0.2.0
     , safe-exceptions ^>=0.1.7
     , scotty ^>=0.11.5
@@ -68,6 +69,7 @@ executable dndgrid
       Protocol
     , ServerLogic
     , DB
+    , Sandstorm
   hs-source-dirs:      src/haskell
 test-suite tests
   import: shared-opts
