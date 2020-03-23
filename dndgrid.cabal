@@ -48,6 +48,7 @@ common shared-opts
     , async ^>=2.2.2
     , base64-bytestring ^>=1.0.0
     , bytestring ^>=0.10.10
+    , case-insensitive ^>=1.2.1
     , containers ^>=0.6.2
     , extra ^>=1.7.1
     , heredoc ^>=0.2.0

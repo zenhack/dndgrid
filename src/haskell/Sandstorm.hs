@@ -1,16 +1,24 @@
+{-# LANGUAGE NamedFieldPuns  #-}
 {-# LANGUAGE RecordWildCards #-}
 module Sandstorm
     ( SessionInfo(..)
     , Pronouns(..)
     , getSessionInfo
+    , websocketGetSessionInfo
     ) where
 
 import Zhp
 
-import Data.List.Extra (wordsBy)
+import Data.List.Extra          (wordsBy)
+import Data.Text.Encoding.Error (lenientDecode)
+import Data.Text.Lazy.Encoding  (decodeUtf8With, encodeUtf8)
 
-import qualified Data.Text.Lazy as LT
-import qualified Web.Scotty     as Sc
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.CaseInsensitive as CI
+import qualified Data.Map.Strict      as M
+import qualified Data.Text.Lazy       as LT
+import qualified Network.WebSockets   as Ws
+import qualified Web.Scotty           as Sc
 
 data Pronouns
     = Neutral
@@ -31,6 +39,16 @@ data SessionInfo = SessionInfo
     deriving(Show, Read, Eq, Ord)
 
 type HeaderReader a = (LT.Text -> Maybe LT.Text) -> a
+
+websocketGetSessionInfo :: Ws.PendingConnection -> SessionInfo
+websocketGetSessionInfo conn =
+    let Ws.RequestHead{requestHeaders} = Ws.pendingRequest conn
+        hdrMap = M.fromList requestHeaders
+        getHeader name =
+            M.lookup (CI.mk $ LBS.toStrict $ encodeUtf8 name) hdrMap
+            & fmap (LBS.fromStrict >>> decodeUtf8With lenientDecode)
+    in
+    getSessionInfo getHeader
 
 getSessionInfo :: HeaderReader SessionInfo
 getSessionInfo getHeader =
