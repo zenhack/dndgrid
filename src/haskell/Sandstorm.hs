@@ -30,31 +30,33 @@ data SessionInfo = SessionInfo
     }
     deriving(Show, Read, Eq, Ord)
 
-getSessionInfo :: Sc.ActionM SessionInfo
-getSessionInfo = do
-    pronouns <- getPronouns
-    userId <- Sc.header "X-Sandstorm-User-Id"
-    permissions <- getPermissions
-    username <- fromMaybe "" <$> Sc.header "X-Sandstorm-Username"
-    preferredHandle <- Sc.header "X-Sandstorm-Preferred-Handle"
-    userPicture <- Sc.header "X-Sandstorm-User-Picture"
-    tabId <- fromMaybe "" <$> Sc.header "X-Sandstorm-Tab-Id"
-    pure SessionInfo{..}
+type HeaderReader a = (LT.Text -> Maybe LT.Text) -> a
 
-getPermissions :: Sc.ActionM [LT.Text]
-getPermissions = do
-    header <- Sc.header "X-Sandstorm-Permissions"
-    pure $ case header of
+getSessionInfo :: HeaderReader SessionInfo
+getSessionInfo getHeader =
+    let
+        pronouns = getPronouns getHeader
+        userId = getHeader "X-Sandstorm-User-Id"
+        permissions = getPermissions getHeader
+        username = fromMaybe "" $ getHeader "X-Sandstorm-Username"
+        preferredHandle = getHeader "X-Sandstorm-Preferred-Handle"
+        userPicture = getHeader "X-Sandstorm-User-Picture"
+        tabId = fromMaybe "" $ getHeader "X-Sandstorm-Tab-Id"
+    in
+    SessionInfo{..}
+
+getPermissions :: HeaderReader [LT.Text]
+getPermissions getHeader =
+    case getHeader "X-Sandstorm-Permissions" of
         Nothing    -> []
         Just value ->
             LT.unpack value
             & wordsBy (== ',')
             & map LT.pack
 
-getPronouns :: Sc.ActionM Pronouns
-getPronouns = do
-    header <- Sc.header "X-Sandstorm-User-Pronouns"
-    pure $ case header of
+getPronouns :: HeaderReader Pronouns
+getPronouns getHeader = do
+    case getHeader "X-Sandstorm-User-Pronouns" of
         Just "netural" -> Neutral
         Just "male"    -> Male
         Just "female"  -> Female
