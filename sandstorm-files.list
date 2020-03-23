@@ -5,7 +5,6 @@
 bin
 build/dndgrid
 build/dndgrid.js
-default-bg.png
 etc/gai.conf
 etc/ld.so.cache
 lib64
@@ -13,7 +12,6 @@ proc/cpuinfo
 sandstorm-http-bridge
 sandstorm-http-bridge-config
 sandstorm-manifest
-start.sh
 static/app.html
 static/setup.js
 usr/bin/bash
