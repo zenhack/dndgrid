@@ -16,6 +16,7 @@ import Network.Wai            (Application)
 import System.Environment     (getEnv)
 
 import qualified DB
+import qualified Sandstorm
 
 import Protocol ()
 import ServerLogic
@@ -44,11 +45,12 @@ makeScottyApp db server = Sc.scottyApp $ do
 
 wsApp :: Server -> Ws.ServerApp
 wsApp server pending = do
+    let sessionInfo = Sandstorm.websocketGetSessionInfo pending
     conn <- Ws.acceptRequestWith
         pending
         Ws.defaultAcceptRequest { Ws.acceptSubprotocol = Just "dndgrid" }
     Ws.withPingThread conn 30 (pure ()) $
-        handleClient server ClientConn
+        handleClient sessionInfo server ClientConn
             { sendMsg = Ws.sendTextData conn . Just
             , recvMsg = do
                 msg <- Ws.receiveData conn

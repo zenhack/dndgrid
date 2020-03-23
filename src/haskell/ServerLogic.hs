@@ -21,9 +21,10 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict      as M
 import qualified DB
 import qualified Protocol             as P
+import qualified Sandstorm
 
-handleClient :: Server -> ClientConn -> IO ()
-handleClient server@(Server{stateVar, db}) clientConn = do
+handleClient :: Sandstorm.SessionInfo -> Server -> ClientConn -> IO ()
+handleClient _ server@(Server{stateVar, db}) clientConn = do
     myChan <- newTChanIO
     pubChan <- atomically $ do
         st <- readTVar stateVar
