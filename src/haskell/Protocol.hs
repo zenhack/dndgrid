@@ -13,6 +13,7 @@ module Protocol
     , Client(..)
     , GridInfo(..)
     , Image(..)
+    , Unit(..)
     , LocalUnit(..)
     , UnitMotion(..)
     , UnitId(..)
@@ -25,8 +26,9 @@ import Zhp
 
 import Prelude (fail)
 
-import Data.Aeson   (FromJSON, ToJSON)
-import GHC.Generics (Generic)
+import Data.Aeson                     (FromJSON, ToJSON)
+import Database.SQLite.Simple.ToField (ToField)
+import GHC.Generics                   (Generic)
 
 import Network.WebSockets (WebSocketsData(..))
 
@@ -40,9 +42,10 @@ import qualified Web.Scotty                  as Sc
 
 
 newtype ID a = ID Int
-    deriving(Show, Read, Eq, Ord, Bounded, FromJSON, ToJSON, Num, Sc.Parsable)
+    deriving(Show, Read, Eq, Ord, Bounded, FromJSON, ToJSON, Num, Sc.Parsable, ToField)
 
 data Client
+data Unit
 data LocalUnit
 data Image
 

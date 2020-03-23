@@ -5,6 +5,8 @@ module DB
     , open
     , init
 
+    , addUnit
+
     , getImage
     , saveImage
 
@@ -21,6 +23,7 @@ import           Database.SQLite.Simple (NamedParam((:=)))
 import qualified Database.SQLite.Simple as SQL
 
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Text.Lazy       as LT
 
 import Text.Heredoc (here, there)
 
@@ -43,6 +46,18 @@ init (Conn c) =
             |]
         SQL.execute_ c
             [here|
+                CREATE TABLE IF NOT EXISTS units
+                    ( id INTEGER PRIMARY KEY
+                    , name VARCHAR NOT NULL
+                      -- We allow this to be null for now, but maybe we should
+                      -- instead tell anonymous users they have to sign in
+                      -- to add units?
+                    , owner VARCHAR
+                    , img_id INTEGER REFERENCES images(id)
+                    )
+            |]
+        SQL.execute_ c
+            [here|
                 CREATE TABLE IF NOT EXISTS grids
                     ( id INTEGER PRIMARY KEY
                     , height INTEGER NOT NULL
@@ -56,6 +71,21 @@ init (Conn c) =
                 INSERT OR IGNORE INTO grids(id, height, width)
                 VALUES (0, 10, 10)
             |]
+
+addUnit :: Conn -> Maybe LT.Text -> LBS.ByteString -> LT.Text -> IO (P.ID P.Unit)
+addUnit conn@(Conn c) userId img name =
+    SQL.withTransaction c $ do
+        imgId <- saveImageNoTx conn img
+        SQL.executeNamed c
+            [here|
+                INSERT INTO units(owner, name, img_id)
+                VALUES (:owner, :name, :img_id)
+            |]
+            [ ":owner" := userId
+            , ":name" := name
+            , ":img_id" := imgId
+            ]
+        P.ID . fromIntegral <$> SQL.lastInsertRowId c
 
 
 oneResult :: IO [a] -> IO a
