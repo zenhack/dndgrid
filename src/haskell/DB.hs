@@ -107,17 +107,22 @@ listUnits :: Conn -> IO [P.UnitInfo]
 listUnits (Conn c) = do
     rs <- SQL.query_ c
         [here|
-            SELECT client_id, local_id, name, img_id
-            FROM units
+            SELECT units.client_id, units.local_id, name, img_id, x, y
+            FROM units, unit_locations
+            WHERE (
+                units.client_id = unit_locations.client_id
+                AND units.local_id = unit_locations.local_id
+                AND grid_id = 0
+            )
         |]
     pure $
         [ P.UnitInfo
             { id = P.UnitId {clientId, localId}
-            , loc = P.Point 1 1
+            , loc = P.Point{x, y}
             , name
             , image
             }
-        | ( clientId, localId, name, image) <- rs
+        | ( clientId, localId, name, image, x, y) <- rs
         ]
 
 
