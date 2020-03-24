@@ -24,7 +24,7 @@ import qualified Protocol             as P
 import qualified Sandstorm
 
 handleClient :: Sandstorm.SessionInfo -> Server -> ClientConn -> IO ()
-handleClient _ server@(Server{stateVar, db}) clientConn = do
+handleClient sessionInfo server@(Server{stateVar, db}) clientConn = do
     myChan <- newTChanIO
     pubChan <- atomically $ do
         st <- readTVar stateVar
@@ -40,7 +40,7 @@ handleClient _ server@(Server{stateVar, db}) clientConn = do
   where
     useClient clientChan clientId = forever $ do
         msg <- recvMsg clientConn
-        handleClientMsg server clientId clientChan msg
+        handleClientMsg sessionInfo server clientId clientChan msg
     teardownClient clientId = atomically $ do
         modifyTVar' stateVar $ \st -> st
             { clients = M.delete clientId (clients st)
@@ -66,22 +66,28 @@ setBg bytes server@(Server{db}) = do
     atomically $ broadcast server $ P.RefreshBg imgId
 
 handleClientMsg
-    :: Server
+    :: Sandstorm.SessionInfo
+    -> Server
     -> P.ID P.Client
     -> TChan P.ServerMsg
     -> P.ClientMsg
     -> IO ()
-handleClientMsg server@(Server{stateVar, db}) clientId clientChan msg =
+handleClientMsg sessionInfo server@(Server{stateVar, db}) clientId clientChan msg =
     case msg of
         P.MoveUnit motion@P.UnitMotion{unitId, loc} -> atomically $ do
             modifyTVar' stateVar $
                 alterUnit unitId $ fmap $ \unit -> (unit {P.loc = loc} :: P.UnitInfo)
             broadcast server (P.UnitMoved motion)
         P.AddUnit{loc, name, localId, imageData = P.Base64LBS bytes} -> do
-            image <- DB.saveImage db bytes
+            let id = P.UnitId {clientId, localId}
+            image <- DB.addUnit
+                db
+                id
+                (Sandstorm.userId sessionInfo)
+                bytes
+                name
+            let unitInfo = P.UnitInfo { id, loc, name, image }
             atomically $ do
-                let id = P.UnitId {clientId, localId}
-                let unitInfo = P.UnitInfo { id, loc, name, image }
                 modifyTVar' stateVar $
                     alterUnit id $ \_ -> Just unitInfo
                 broadcast server (P.UnitAdded unitInfo)

@@ -96,7 +96,7 @@ addUnit
     -> Maybe LT.Text
     -> LBS.ByteString
     -> LT.Text
-    -> IO (P.ID P.Unit)
+    -> IO (P.ID P.Image)
 addUnit conn@(Conn c) P.UnitId{clientId, localId} owner img name =
     SQL.withTransaction c $ do
         imgId <- saveImageNoTx conn img
@@ -111,7 +111,7 @@ addUnit conn@(Conn c) P.UnitId{clientId, localId} owner img name =
             , ":client_id" := clientId
             , ":local_id" := localId
             ]
-        P.ID . fromIntegral <$> SQL.lastInsertRowId c
+        pure imgId
 
 
 oneResult :: IO [a] -> IO a
