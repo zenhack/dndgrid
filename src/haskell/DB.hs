@@ -7,6 +7,7 @@ module DB
     , init
 
     , addUnit
+    , listUnits
 
     , nextClientId
 
@@ -89,6 +90,23 @@ nextClientId (Conn c) = do
     pure $ case rs of
         []             -> 0
         (SQL.Only r:_) -> r
+
+listUnits :: Conn -> IO [P.UnitInfo]
+listUnits (Conn c) = do
+    rs <- SQL.query_ c
+        [here|
+            SELECT client_id, local_id, name, img_id
+            FROM units
+        |]
+    pure $
+        [ P.UnitInfo
+            { id = P.UnitId {clientId, localId}
+            , loc = P.Point 1 1
+            , name
+            , image
+            }
+        | ( clientId, localId, name, image) <- rs
+        ]
 
 addUnit
     :: Conn

@@ -134,6 +134,7 @@ data ClientConn = ClientConn
 
 newServer :: DB.Conn -> IO Server
 newServer db = do
+    units <- DB.listUnits db
     nextClientId <- DB.nextClientId db
     gridInfo <- DB.getGrid db
     atomically $ do
@@ -141,7 +142,7 @@ newServer db = do
         stateVar <- newTVar ServerState
             { grid = GridState
                 { settings = gridInfo
-                , units = M.empty
+                , units = M.fromList [(id, unit) | unit@P.UnitInfo{id} <- units]
                 }
             , nextClientId
             , clients = M.empty
