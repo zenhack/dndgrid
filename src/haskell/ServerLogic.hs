@@ -74,10 +74,12 @@ handleClientMsg
     -> IO ()
 handleClientMsg sessionInfo server@(Server{stateVar, db}) clientId clientChan msg =
     case msg of
-        P.MoveUnit motion@P.UnitMotion{unitId, loc} -> atomically $ do
-            modifyTVar' stateVar $
-                alterUnit unitId $ fmap $ \unit -> (unit {P.loc = loc} :: P.UnitInfo)
-            broadcast server (P.UnitMoved motion)
+        P.MoveUnit motion@P.UnitMotion{unitId, loc} -> do
+            DB.setUnitLoc db unitId loc
+            atomically $ do
+                modifyTVar' stateVar $
+                    alterUnit unitId $ fmap $ \unit -> (unit {P.loc = loc} :: P.UnitInfo)
+                broadcast server (P.UnitMoved motion)
         P.AddUnit{loc, name, localId, imageData = P.Base64LBS bytes} -> do
             let id = P.UnitId {clientId, localId}
             image <- DB.addUnit

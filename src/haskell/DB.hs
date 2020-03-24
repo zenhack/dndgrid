@@ -7,6 +7,7 @@ module DB
     , init
 
     , addUnit
+    , setUnitLoc
     , listUnits
 
     , nextClientId
@@ -71,6 +72,17 @@ init (Conn c) =
                     , bg_image INTEGER REFERENCES images(id)
                     )
             |]
+        SQL.execute_ c
+            [here|
+                CREATE TABLE IF NOT EXISTS unit_locations
+                    ( grid_id INTEGER NOT NULL REFERENCES grids(id)
+                    , client_id INTEGER NOT NULL REFERENCES units(client_id)
+                    , local_id INTEGER NOT NULL REFERENCES units(local_id)
+                    , x INTEGER NOT NULL
+                    , y INTEGER NOT NULL
+                    , UNIQUE(client_id, local_id, grid_id)
+                    )
+            |]
         -- Create a 10x10 grid:
         SQL.execute_ c
             [here|
@@ -106,6 +118,21 @@ listUnits (Conn c) = do
             , image
             }
         | ( clientId, localId, name, image) <- rs
+        ]
+
+
+setUnitLoc :: Conn -> P.UnitId -> P.Point -> IO ()
+setUnitLoc (Conn c) P.UnitId{clientId, localId} P.Point{x, y} =
+    SQL.executeNamed c
+        [here|
+            INSERT OR REPLACE
+            INTO unit_locations(grid_id, client_id, local_id, x, y)
+            VALUES(0, :client_id, :local_id, :x, :y)
+        |]
+        [ ":x" := x
+        , ":y" := y
+        , ":client_id" := clientId
+        , ":local_id" := localId
         ]
 
 addUnit
