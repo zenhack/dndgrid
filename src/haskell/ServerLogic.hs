@@ -128,6 +128,7 @@ data ClientConn = ClientConn
 
 newServer :: DB.Conn -> IO Server
 newServer db = do
+    nextClientId <- DB.nextClientId db
     gridInfo <- DB.getGrid db
     atomically $ do
         ch <- newBroadcastTChan
@@ -136,7 +137,7 @@ newServer db = do
                 { settings = gridInfo
                 , units = M.empty
                 }
-            , nextClientId = 0
+            , nextClientId
             , clients = M.empty
             , broadcastChan = ch
             }

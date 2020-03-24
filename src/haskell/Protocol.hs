@@ -26,9 +26,10 @@ import Zhp
 
 import Prelude (fail)
 
-import Data.Aeson                     (FromJSON, ToJSON)
-import Database.SQLite.Simple.ToField (ToField)
-import GHC.Generics                   (Generic)
+import Data.Aeson                       (FromJSON, ToJSON)
+import Database.SQLite.Simple.FromField (FromField)
+import Database.SQLite.Simple.ToField   (ToField)
+import GHC.Generics                     (Generic)
 
 import Network.WebSockets (WebSocketsData(..))
 
@@ -41,8 +42,13 @@ import qualified Data.Text.Lazy              as LT
 import qualified Web.Scotty                  as Sc
 
 
-newtype ID a = ID Int
-    deriving(Show, Read, Eq, Ord, Bounded, FromJSON, ToJSON, Num, Sc.Parsable, ToField)
+newtype ID a = ID Int deriving
+    ( Show, Read, Eq, Ord, Bounded
+    , FromJSON, ToJSON
+    , Num
+    , Sc.Parsable
+    , ToField, FromField
+    )
 
 data Client
 data Unit

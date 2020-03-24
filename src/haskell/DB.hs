@@ -1,11 +1,14 @@
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE QuasiQuotes    #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE QuasiQuotes           #-}
 module DB
     ( Conn
     , open
     , init
 
     , addUnit
+
+    , nextClientId
 
     , getImage
     , saveImage
@@ -47,13 +50,15 @@ init (Conn c) =
         SQL.execute_ c
             [here|
                 CREATE TABLE IF NOT EXISTS units
-                    ( id INTEGER PRIMARY KEY
+                    ( client_id INTEGER NOT NULL
+                    , local_id INTEGER NOT NULL
                     , name VARCHAR NOT NULL
                       -- We allow this to be null for now, but maybe we should
                       -- instead tell anonymous users they have to sign in
                       -- to add units?
                     , owner VARCHAR
                     , img_id INTEGER REFERENCES images(id)
+                    , UNIQUE(client_id, local_id)
                     )
             |]
         SQL.execute_ c
@@ -72,18 +77,39 @@ init (Conn c) =
                 VALUES (0, 10, 10)
             |]
 
-addUnit :: Conn -> Maybe LT.Text -> LBS.ByteString -> LT.Text -> IO (P.ID P.Unit)
-addUnit conn@(Conn c) userId img name =
+nextClientId :: Conn -> IO (P.ID P.Client)
+nextClientId (Conn c) = do
+    rs <- SQL.query_ c
+        [here|
+            SELECT client_id + 1
+            FROM units
+            ORDER BY client_id DESC
+            LIMIT 1
+        |]
+    pure $ case rs of
+        []             -> 0
+        (SQL.Only r:_) -> r
+
+addUnit
+    :: Conn
+    -> P.UnitId
+    -> Maybe LT.Text
+    -> LBS.ByteString
+    -> LT.Text
+    -> IO (P.ID P.Unit)
+addUnit conn@(Conn c) P.UnitId{clientId, localId} owner img name =
     SQL.withTransaction c $ do
         imgId <- saveImageNoTx conn img
         SQL.executeNamed c
             [here|
-                INSERT INTO units(owner, name, img_id)
-                VALUES (:owner, :name, :img_id)
+                INSERT INTO units(owner, name, img_id, client_id, local_Id)
+                VALUES (:owner, :name, :img_id, :client_id, :local_id)
             |]
-            [ ":owner" := userId
+            [ ":owner" := owner
             , ":name" := name
             , ":img_id" := imgId
+            , ":client_id" := clientId
+            , ":local_id" := localId
             ]
         P.ID . fromIntegral <$> SQL.lastInsertRowId c
 
