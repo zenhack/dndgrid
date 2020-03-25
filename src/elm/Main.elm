@@ -150,33 +150,55 @@ unitGridItem zoom ( id, { loc, name, image } ) =
             a [ href "#", onClick (ChooseUnit id) ]
     in
     { item =
-        div
+        Grid.view
             [ style "width" <| imgSize
             , style "height" <| imgSize
             , Layer.layer Layer.units
             ]
-            [ div
-                [ style "display" "flex"
-                , style "justify-content" "space-between"
+            { rows = 2
+            , cols = 2
+            , items =
+                [ { loc = { x = 1, y = 1, w = 1, h = 1 }
+                  , item =
+                        a
+                            [ href "#"
+                            , onClick (ChooseUnit id)
+                            , style "display" "block"
+                            , style "z-index" "2"
+                            , style "position" "relative"
+                            ]
+                            [ text name ]
+                  }
+                , { loc = { x = 2, y = 1, w = 1, h = 1 }
+                  , item =
+                        a
+                            [ href "#"
+                            , onClick (DeleteUnit id)
+                            , style "display" "block"
+                            , style "text-align" "right"
+                            , style "z-index" "2"
+                            , style "position" "relative"
+                            ]
+                            [ text "X" ]
+                  }
+                , { loc = { x = 1, y = 1, w = 2, h = 2 }
+                  , item =
+                        a
+                            [ href "#"
+                            , onClick (ChooseUnit id)
+                            , style "z-index" "1"
+                            , style "position" "relative"
+                            ]
+                            [ img
+                                [ src <| Protocol.imageUrl image
+                                , style "max-width" "100%"
+                                , style "max-height" "100%"
+                                ]
+                                []
+                            ]
+                  }
                 ]
-                [ a [ href "#", onClick (ChooseUnit id) ] [ text name ]
-                , a [ href "#", onClick (DeleteUnit id) ] [ text "X" ]
-                ]
-            , centeredX <|
-                a
-                    [ style "display" "block"
-                    , href "#"
-                    , onClick (ChooseUnit id)
-                    ]
-                    [ img
-                        [ src <| Protocol.imageUrl image
-                        , style "display" "block"
-                        , style "max-width" "100%"
-                        , style "max-height" "100%"
-                        ]
-                        []
-                    ]
-            ]
+            }
     , loc =
         { x = loc.x
         , y = loc.y
