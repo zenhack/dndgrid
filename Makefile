@@ -25,6 +25,6 @@ build/dndgrid: $(hs_src) build/.mkdir
 		-exec cp \{} $@ \;
 	strip $@
 dndgrid.spk: all sandstorm-files.list sandstorm-pkgdef.capnp
-	spk pack
+	spk pack $@
 
 .PHONY: all run dev pack
