@@ -145,28 +145,38 @@ unitGridItem zoom ( id, { loc, name, image } ) =
     let
         imgSize =
             zoomPx zoom
+
+        chooseLink =
+            a [ href "#", onClick (ChooseUnit id) ]
     in
     { item =
-        centered <|
-            div
-                [ style "width" <| imgSize
-                , style "height" <| imgSize
-                , Layer.layer Layer.units
+        div
+            [ style "width" <| imgSize
+            , style "height" <| imgSize
+            , Layer.layer Layer.units
+            ]
+            [ div
+                [ style "display" "flex"
+                , style "justify-content" "space-between"
                 ]
-                [ a [ href "#", onClick (DeleteUnit id) ] [ text "X" ]
-                , a
-                    [ href "#"
+                [ a [ href "#", onClick (ChooseUnit id) ] [ text name ]
+                , a [ href "#", onClick (DeleteUnit id) ] [ text "X" ]
+                ]
+            , centeredX <|
+                a
+                    [ style "display" "block"
+                    , href "#"
                     , onClick (ChooseUnit id)
                     ]
                     [ img
                         [ src <| Protocol.imageUrl image
-                        , style "max-width" <| imgSize
-                        , style "max-height" <| imgSize
+                        , style "display" "block"
+                        , style "max-width" "100%"
+                        , style "max-height" "100%"
                         ]
                         []
-                    , text name
                     ]
-                ]
+            ]
     , loc =
         { x = loc.x
         , y = loc.y
