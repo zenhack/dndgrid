@@ -69,6 +69,7 @@ data ClientMsg
         , loc       :: Point
         , imageData :: Base64LBS
         }
+    | DeleteUnit UnitId
     | SetGridSize Point
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ClientMsg
@@ -126,6 +127,7 @@ data ServerMsg
         }
     | UnitMoved UnitMotion
     | UnitAdded UnitInfo
+    | UnitDeleted UnitId
     | RefreshBg !(ID Image)
     | GridSizeChanged Point
     deriving(Show, Read, Eq, Ord, Generic)

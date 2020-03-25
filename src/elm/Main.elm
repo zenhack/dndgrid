@@ -52,6 +52,7 @@ type Msg
     | ChooseSquare Protocol.Point
     | SetUnitName String
     | DeployUnit
+    | DeleteUnit UnitID
     | GotServerMsg (Result Protocol.Error Protocol.ServerMsg)
     | SelectedImg ImgPurpose File
     | GotLocalUnitImgData UnitImgData
@@ -152,7 +153,8 @@ unitGridItem zoom ( id, { loc, name, image } ) =
                 , style "height" <| imgSize
                 , Layer.layer Layer.units
                 ]
-                [ a
+                [ a [ href "#", onClick (DeleteUnit id) ] [ text "X" ]
+                , a
                     [ href "#"
                     , onClick (ChooseUnit id)
                     ]
@@ -602,6 +604,11 @@ update msg model =
             , Cmd.none
             )
 
+        ( DeleteUnit id, Ready m ) ->
+            ( Ready { m | units = Dict.remove id m.units }
+            , Protocol.send <| Protocol.DeleteUnit (unitIdToProtocol id)
+            )
+
         ( ChooseUnit id, Ready m ) ->
             ( Ready { m | currentUnit = Just id }
             , Cmd.none
@@ -788,6 +795,11 @@ applyServerMsg msg model =
                             (\_ -> Just { loc = loc, name = name, image = image })
                             m.units
                 }
+            , Cmd.none
+            )
+
+        ( Protocol.UnitDeleted unitId, Ready m ) ->
+            ( Ready { m | units = Dict.remove (unitIdFromProtocol unitId) m.units }
             , Cmd.none
             )
 

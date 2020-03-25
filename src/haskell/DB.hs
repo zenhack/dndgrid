@@ -7,6 +7,7 @@ module DB
     , init
 
     , addUnit
+    , deleteUnit
     , setUnitLoc
     , listUnits
 
@@ -60,7 +61,7 @@ init (Conn c) =
                       -- to add units?
                     , owner VARCHAR
                     , img_id INTEGER REFERENCES images(id)
-                    , UNIQUE(client_id, local_id)
+                    , PRIMARY KEY(client_id, local_id)
                     )
             |]
         SQL.execute_ c
@@ -76,8 +77,8 @@ init (Conn c) =
             [here|
                 CREATE TABLE IF NOT EXISTS unit_locations
                     ( grid_id INTEGER NOT NULL REFERENCES grids(id)
-                    , client_id INTEGER NOT NULL REFERENCES units(client_id)
-                    , local_id INTEGER NOT NULL REFERENCES units(local_id)
+                    , client_id INTEGER NOT NULL REFERENCES units(client_id) ON DELETE CASCADE
+                    , local_id INTEGER NOT NULL REFERENCES units(local_id) ON DELETE CASCADE
                     , x INTEGER NOT NULL
                     , y INTEGER NOT NULL
                     , UNIQUE(client_id, local_id, grid_id)
@@ -137,6 +138,18 @@ setUnitLoc (Conn c) P.UnitId{clientId, localId} P.Point{x, y} =
         [ ":x" := x
         , ":y" := y
         , ":client_id" := clientId
+        , ":local_id" := localId
+        ]
+
+deleteUnit :: Conn -> P.UnitId -> IO ()
+deleteUnit (Conn c) P.UnitId{clientId, localId} =
+    SQL.executeNamed c
+        [here|
+            DELETE FROM units
+            WHERE client_id = :client_id
+            AND local_id = :local_id
+        |]
+        [ ":client_id" := clientId
         , ":local_id" := localId
         ]
 

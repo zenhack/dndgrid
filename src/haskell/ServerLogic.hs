@@ -93,6 +93,9 @@ handleClientMsg sessionInfo server@(Server{stateVar, db}) clientId clientChan ms
                 modifyTVar' stateVar $
                     alterUnit id $ \_ -> Just unitInfo
                 broadcast server (P.UnitAdded unitInfo)
+        P.DeleteUnit unitId -> do
+            DB.deleteUnit db unitId
+            atomically $ broadcast server $ P.UnitDeleted unitId
         P.SetGridSize size -> do
             atomically $ do
                 modifyTVar' stateVar $

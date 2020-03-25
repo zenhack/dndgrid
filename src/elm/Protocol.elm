@@ -51,6 +51,7 @@ type ClientMsg
         , loc : Point
         , imageData : Bytes
         }
+    | DeleteUnit UnitId
     | SetGridSize Point
 
 
@@ -64,6 +65,7 @@ type ServerMsg
     = Welcome WelcomeMsg
     | UnitMoved UnitMotion
     | UnitAdded UnitInfo
+    | UnitDeleted UnitId
     | RefreshBg Int
     | GridSizeChanged Point
 
@@ -114,6 +116,12 @@ encodeClientMsg msg =
                 , ( "name", E.string name )
                 , ( "loc", encodePoint loc )
                 , ( "imageData", encodeBytes imageData )
+                ]
+
+        DeleteUnit unitId ->
+            E.object
+                [ ( "tag", E.string "DeleteUnit" )
+                , ( "contents", encodeUnitId unitId )
                 ]
 
         SetGridSize sz ->
@@ -177,6 +185,9 @@ decodeServerMsg =
 
                     "UnitAdded" ->
                         D.map UnitAdded (D.field "contents" decodeUnitInfo)
+
+                    "UnitDeleted" ->
+                        D.map UnitDeleted (D.field "contents" decodeUnitId)
 
                     "RefreshBg" ->
                         D.map RefreshBg (D.field "contents" D.int)
