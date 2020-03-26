@@ -80,7 +80,7 @@ handleClientMsg sessionInfo server@(Server{stateVar, db}) clientId clientChan ms
                 modifyTVar' stateVar $
                     alterUnit unitId $ fmap $ \unit -> (unit {P.loc = loc} :: P.UnitInfo)
                 broadcast server (P.UnitMoved motion)
-        P.AddUnit{loc, name, localId, imageData = P.Base64LBS bytes} -> do
+        P.AddUnit{loc, name, size, localId, imageData = P.Base64LBS bytes} -> do
             let id = P.UnitId {clientId, localId}
             image <- DB.addUnit
                 db
@@ -88,7 +88,8 @@ handleClientMsg sessionInfo server@(Server{stateVar, db}) clientId clientChan ms
                 (Sandstorm.userId sessionInfo)
                 bytes
                 name
-            let unitInfo = P.UnitInfo { id, loc, name, image }
+                size
+            let unitInfo = P.UnitInfo { id, loc, name, size, image }
             atomically $ do
                 modifyTVar' stateVar $
                     alterUnit id $ \_ -> Just unitInfo

@@ -615,6 +615,7 @@ update msg model =
                             Protocol.AddUnit
                                 { localId = m.nextUnit.id
                                 , name = m.nextUnit.name
+                                , size = 1
                                 , loc = loc
                                 , imageData = bytes
                                 }

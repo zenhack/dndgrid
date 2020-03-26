@@ -66,6 +66,7 @@ data ClientMsg
     | AddUnit
         { localId   :: !(ID LocalUnit)
         , name      :: LT.Text
+        , size      :: !Int
         , loc       :: Point
         , imageData :: Base64LBS
         }
@@ -144,6 +145,7 @@ data UnitInfo = UnitInfo
     { loc   :: Point
     , id    :: UnitId
     , name  :: LT.Text
+    , size  :: !Int
     , image :: ID Image
     }
     deriving(Show, Read, Eq, Ord, Generic)

@@ -140,7 +140,7 @@ listUnits :: Conn -> IO [P.UnitInfo]
 listUnits (Conn c) = do
     rs <- SQL.query_ c
         [here|
-            SELECT units.client_id, units.local_id, name, img_id, x, y
+            SELECT units.client_id, units.local_id, name, size, img_id, x, y
             FROM units, unit_locations
             WHERE (
                 units.client_id = unit_locations.client_id
@@ -153,9 +153,10 @@ listUnits (Conn c) = do
             { id = P.UnitId {clientId, localId}
             , loc = P.Point{x, y}
             , name
+            , size
             , image
             }
-        | ( clientId, localId, name, image, x, y) <- rs
+        | ( clientId, localId, name, size, image, x, y) <- rs
         ]
 
 
@@ -191,17 +192,19 @@ addUnit
     -> Maybe LT.Text
     -> LBS.ByteString
     -> LT.Text
+    -> Int
     -> IO (P.ID P.Image)
-addUnit conn@(Conn c) P.UnitId{clientId, localId} owner img name =
+addUnit conn@(Conn c) P.UnitId{clientId, localId} owner img name size =
     SQL.withTransaction c $ do
         imgId <- saveImageNoTx conn img
         SQL.executeNamed c
             [here|
-                INSERT INTO units(owner, name, img_id, client_id, local_Id)
-                VALUES (:owner, :name, :img_id, :client_id, :local_id)
+                INSERT INTO units(owner, name, img_id, client_id, local_Id, size)
+                VALUES (:owner, :name, :img_id, :client_id, :local_id, size)
             |]
             [ ":owner" := owner
             , ":name" := name
+            , ":size" := size
             , ":img_id" := imgId
             , ":client_id" := clientId
             , ":local_id" := localId

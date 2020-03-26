@@ -48,6 +48,7 @@ type ClientMsg
     | AddUnit
         { localId : Int
         , name : String
+        , size : Int
         , loc : Point
         , imageData : Bytes
         }
@@ -86,6 +87,7 @@ type alias GridInfo =
 type alias UnitInfo =
     { id : UnitId
     , name : String
+    , size : Int
     , loc : Point
     , image : Int
     }
@@ -109,11 +111,12 @@ encodeClientMsg msg =
                 , ( "contents", encodeUnitMotion motion )
                 ]
 
-        AddUnit { localId, name, loc, imageData } ->
+        AddUnit { localId, name, size, loc, imageData } ->
             E.object
                 [ ( "tag", E.string "AddUnit" )
                 , ( "localId", E.int localId )
                 , ( "name", E.string name )
+                , ( "size", E.int size )
                 , ( "loc", encodePoint loc )
                 , ( "imageData", encodeBytes imageData )
                 ]
@@ -208,9 +211,10 @@ decodeGridInfo =
 
 decodeUnitInfo : D.Decoder UnitInfo
 decodeUnitInfo =
-    D.map4 UnitInfo
+    D.map5 UnitInfo
         (D.field "id" decodeUnitId)
         (D.field "name" D.string)
+        (D.field "size" D.int)
         (D.field "loc" decodePoint)
         (D.field "image" D.int)
 
