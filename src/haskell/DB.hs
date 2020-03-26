@@ -84,12 +84,44 @@ init (Conn c) =
                     , UNIQUE(client_id, local_id, grid_id)
                     )
             |]
-        -- Create a 10x10 grid:
+        SQL.execute_ c
+            [here|
+                CREATE TABLE IF NOT EXISTS schema_version
+                    ( version_no INTEGER UNIQUE NOT NULL
+                    )
+            |]
+        -- Create a 10x10 grid, if it does not already exist:
         SQL.execute_ c
             [here|
                 INSERT OR IGNORE INTO grids(id, height, width)
                 VALUES (0, 10, 10)
             |]
+        version <- getDBVersion (Conn c)
+        when (version < 1) $ do
+            SQL.execute_ c
+                [here|
+                    ALTER TABLE units
+                    ADD COLUMN size INTEGER NOT NULL DEFAULT 1
+                |]
+        setDBVersionNoTx (Conn c) 1
+
+getDBVersion :: Conn -> IO Int
+getDBVersion (Conn c) = do
+    rs <- SQL.query_ c "SELECT version_no FROM schema_version"
+    pure $ case rs of
+        (SQL.Only v:_) -> v
+        _              -> 0
+
+setDBVersionNoTx :: Conn -> Int -> IO ()
+setDBVersionNoTx (Conn c) versionNo = do
+    SQL.execute_ c "DELETE FROM schema_version"
+    SQL.executeNamed c
+        [here|
+            INSERT INTO schema_version(version_no)
+            VALUES(:version_no)
+        |]
+        [ ":version_no" := versionNo
+        ]
 
 nextClientId :: Conn -> IO (P.ID P.Client)
 nextClientId (Conn c) = do
