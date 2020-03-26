@@ -200,7 +200,7 @@ addUnit conn@(Conn c) P.UnitId{clientId, localId} owner img name size =
         SQL.executeNamed c
             [here|
                 INSERT INTO units(owner, name, img_id, client_id, local_Id, size)
-                VALUES (:owner, :name, :img_id, :client_id, :local_id, size)
+                VALUES (:owner, :name, :img_id, :client_id, :local_id, :size)
             |]
             [ ":owner" := owner
             , ":name" := name
