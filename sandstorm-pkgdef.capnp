@@ -93,7 +93,7 @@ const pkgdef :Spk.PackageDefinition = (
         # at https://docs.sandstorm.io/en/latest/developing/publishing-apps/#verify-your-identity
       ),
 
-      pgpKeyring = embed "keyring.gpg",
+      pgpKeyring = embed "pgp-keyring",
       # A keyring in GPG keyring format containing all public keys needed to verify PGP signatures in
       # this manifest (as of this writing, there is only one: `author.pgpSignature`).
       #
