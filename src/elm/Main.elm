@@ -51,6 +51,7 @@ type Msg
     = ChooseUnit UnitID
     | ChooseSquare Protocol.Point
     | SetUnitName String
+    | SetUnitSize String
     | DeployUnit
     | DeleteUnit UnitID
     | GotServerMsg (Result Protocol.Error Protocol.ServerMsg)
@@ -79,6 +80,7 @@ type ImgPurpose
 type alias Unit =
     { loc : Protocol.Point
     , name : String
+    , size : Int
     , image : Int
     }
 
@@ -107,6 +109,7 @@ type alias ReadyModel =
 type alias NextUnitState =
     { id : Int
     , name : String
+    , size : Int
     , img :
         Maybe
             { file : File
@@ -141,10 +144,13 @@ zoomPx zoom =
 
 
 unitGridItem : Float -> ( UnitID, Unit ) -> Grid.GridItem (Html Msg)
-unitGridItem zoom ( id, { loc, name, image } ) =
+unitGridItem zoom ( id, { loc, name, size, image } ) =
     let
+        unitSize =
+            max size 1
+
         imgSize =
-            zoomPx zoom
+            zoomPx (toFloat unitSize * zoom)
 
         chooseLink =
             a [ href "#", onClick (ChooseUnit id) ]
@@ -202,8 +208,8 @@ unitGridItem zoom ( id, { loc, name, image } ) =
     , loc =
         { x = loc.x
         , y = loc.y
-        , w = 1
-        , h = 1
+        , w = unitSize
+        , h = unitSize
         }
     }
 
@@ -405,6 +411,14 @@ viewAddUnit { nextUnit, zoom } =
         List.concat
             [ [ h1 [] [ text "Add Unit" ]
               , labeled input "name" "Name" [ onInput SetUnitName ] []
+              , labeled input
+                    "size"
+                    "Size"
+                    [ onInput SetUnitSize
+                    , type_ "number"
+                    , placeholder "1"
+                    ]
+                    []
               ]
             , imgData
                 |> Maybe.map
@@ -603,9 +617,9 @@ update msg model =
                             Just unitId
                         , units = m.units
                         , nextUnit =
-                            { id =
-                                m.nextUnit.id + 1
+                            { id = m.nextUnit.id + 1
                             , name = ""
+                            , size = m.nextUnit.size
                             , img = Nothing
                             }
                     }
@@ -615,7 +629,7 @@ update msg model =
                             Protocol.AddUnit
                                 { localId = m.nextUnit.id
                                 , name = m.nextUnit.name
-                                , size = 1
+                                , size = m.nextUnit.size
                                 , loc = loc
                                 , imageData = bytes
                                 }
@@ -636,6 +650,20 @@ update msg model =
             ( Ready { m | nextUnit = { unit | name = name } }
             , Cmd.none
             )
+
+        ( SetUnitSize str, Ready m ) ->
+            case String.toInt str of
+                Nothing ->
+                    ( Ready m, Cmd.none )
+
+                Just size ->
+                    let
+                        unit =
+                            m.nextUnit
+                    in
+                    ( Ready { m | nextUnit = { unit | size = size } }
+                    , Cmd.none
+                    )
 
         ( DeleteUnit id, Ready m ) ->
             ( Ready { m | units = Dict.remove id m.units }
@@ -761,10 +789,11 @@ applyServerMsg msg model =
                 , units =
                     unitInfo
                         |> List.map
-                            (\{ loc, name, id, image } ->
+                            (\{ loc, name, size, id, image } ->
                                 ( ( id.clientId, id.localId )
                                 , { loc = loc
                                   , name = name
+                                  , size = size
                                   , image = image
                                   }
                                 )
@@ -773,6 +802,7 @@ applyServerMsg msg model =
                 , nextUnit =
                     { id = 0
                     , name = ""
+                    , size = 1
                     , img = Nothing
                     }
                 , clientId = yourClientId
@@ -819,13 +849,13 @@ applyServerMsg msg model =
             , Cmd.none
             )
 
-        ( Protocol.UnitAdded { id, loc, name, image }, Ready m ) ->
+        ( Protocol.UnitAdded { id, loc, name, size, image }, Ready m ) ->
             ( Ready
                 { m
                     | units =
                         Dict.update
                             (unitIdFromProtocol id)
-                            (\_ -> Just { loc = loc, name = name, image = image })
+                            (\_ -> Just { loc = loc, name = name, size = size, image = image })
                             m.units
                 }
             , Cmd.none
