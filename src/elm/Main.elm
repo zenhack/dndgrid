@@ -155,6 +155,10 @@ unitGridItem zoom ( id, { loc, name, size, image } ) =
         chooseLink =
             a [ href "#", onClick (ChooseUnit id) ]
     in
+    -- Each unit on the grid is itself layed out using css grid. It uses
+    -- a 2x2 grid, with the upper left containing the unit name, the upper
+    -- right containing the delete button, and the image taking up all
+    -- four cells. This means the text appears above the image.
     { item =
         Grid.view
             [ style "width" <| imgSize
