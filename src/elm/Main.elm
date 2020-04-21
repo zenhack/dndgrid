@@ -154,6 +154,15 @@ unitGridItem zoom ( id, { loc, name, size, image } ) =
 
         chooseLink =
             a [ href "#", onClick (ChooseUnit id) ]
+
+        linkStyle =
+            [ -- Black text with a white stroke, so this is visible
+              -- regarless of the background's color.
+              style "color" "black"
+            , style "font-weight" "bold"
+            , style "-webkit-text-stroke" "1px white"
+            , style "text-decoration" "none"
+            ]
     in
     -- Each unit on the grid is itself layed out using css grid. It uses
     -- a 2x2 grid, with the upper left containing the unit name, the upper
@@ -171,24 +180,28 @@ unitGridItem zoom ( id, { loc, name, size, image } ) =
                 [ { loc = { x = 1, y = 1, w = 1, h = 1 }
                   , item =
                         a
-                            [ href "#"
-                            , onClick (ChooseUnit id)
-                            , style "display" "block"
-                            , style "z-index" "2"
-                            , style "position" "relative"
-                            ]
+                            ([ href "#"
+                             , onClick (ChooseUnit id)
+                             , style "display" "block"
+                             , style "z-index" "2"
+                             , style "position" "relative"
+                             ]
+                                ++ linkStyle
+                            )
                             [ text name ]
                   }
                 , { loc = { x = 2, y = 1, w = 1, h = 1 }
                   , item =
                         a
-                            [ href "#"
-                            , onClick (DeleteUnit id)
-                            , style "display" "block"
-                            , style "text-align" "right"
-                            , style "z-index" "2"
-                            , style "position" "relative"
-                            ]
+                            ([ href "#"
+                             , onClick (DeleteUnit id)
+                             , style "display" "block"
+                             , style "text-align" "right"
+                             , style "z-index" "2"
+                             , style "position" "relative"
+                             ]
+                                ++ linkStyle
+                            )
                             [ text "X" ]
                   }
                 , { loc = { x = 1, y = 1, w = 2, h = 2 }
