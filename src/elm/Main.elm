@@ -313,9 +313,11 @@ viewGrid m =
                         ++ cellButtons
             }
     in
-    Grid.view
-        (bgAttrs m.grid)
-        grid
+    div [ style "overflow" "scroll" ]
+        [ Grid.view
+            (bgAttrs m.grid)
+            grid
+        ]
 
 
 bgAttrs : Protocol.GridInfo -> List (Attribute msg)
