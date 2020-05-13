@@ -157,7 +157,7 @@ unitGridItem zoom ( id, { loc, name, size, image } ) =
 
         linkStyle =
             [ -- Black text with a white stroke, so this is visible
-              -- regarless of the background's color.
+              -- regardless of the background's color.
               style "color" "black"
             , style "font-weight" "bold"
             , style "-webkit-text-stroke" "1px white"
