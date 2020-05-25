@@ -156,12 +156,13 @@ unitGridItem zoom ( id, { loc, name, size, image } ) =
             a [ href "#", onClick (ChooseUnit id) ]
 
         linkStyle =
-            [ -- Black text with a white stroke, so this is visible
-              -- regardless of the background's color.
+            [ -- Black text with a 50% transparent white background. This lets
+              -- the unit's image show up underneath while still giving us some
+              -- control over the readability of the text.
               style "color" "black"
             , style "font-weight" "bold"
-            , style "-webkit-text-stroke" "1px white"
             , style "text-decoration" "none"
+            , style "background-color" "rgba(255,255,255,0.5)"
 
             -- Serifs make things visually too busy at this scale, especially
             -- with the stroke outline.
