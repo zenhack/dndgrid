@@ -1,4 +1,4 @@
-module Events exposing (onDragEnter, onDragOver, onDragStart, onDrop)
+module Events exposing (onChange, onDragEnter, onDragOver, onDragStart, onDrop)
 
 import Html exposing (Attribute)
 import Html.Events exposing (on, preventDefaultOn)
@@ -23,3 +23,8 @@ onDragOver msg =
 onDrop : msg -> Attribute msg
 onDrop msg =
     on "drop" (D.succeed msg)
+
+
+onChange : (String -> msg) -> Attribute msg
+onChange mkMsg =
+    on "change" (D.map mkMsg (D.field "target" (D.field "value" D.string)))

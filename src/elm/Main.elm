@@ -8,7 +8,7 @@ import File exposing (File)
 import File.Select
 import Grid
 import Html exposing (..)
-import Html.Attributes exposing (disabled, for, href, name, placeholder, src, style, type_, value)
+import Html.Attributes exposing (disabled, for, href, name, placeholder, selected, src, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Layer
@@ -437,14 +437,30 @@ viewAddUnit { nextUnit, zoom } =
         List.concat
             [ [ h1 [] [ text "Add Unit" ]
               , labeled input "name" "Name" [ onInput SetUnitName ] []
-              , labeled input
+              , labeled select
                     "size"
                     "Size"
-                    [ onInput SetUnitSize
-                    , type_ "number"
-                    , placeholder "1"
+                    [ Events.onChange SetUnitSize
                     ]
-                    []
+                    ([ ( "Small/Medium", 1 )
+                     , ( "Large", 2 )
+                     , ( "Huge", 3 )
+                     , ( "Guargantuan", 4 )
+                     , ( "Colossal", 6 )
+                     ]
+                        |> List.map
+                            (\( lbl, val ) ->
+                                let
+                                    valStr =
+                                        String.fromInt val
+                                in
+                                option
+                                    [ selected (val == nextUnit.size)
+                                    , value valStr
+                                    ]
+                                    [ text <| lbl ++ " (" ++ valStr ++ "x" ++ valStr ++ ")" ]
+                            )
+                    )
               ]
             , imgData
                 |> Maybe.map
