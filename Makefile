@@ -15,7 +15,7 @@ build/.mkdir:
 	[ -d build ] || mkdir build
 	touch $@
 build/dndgrid.js: $(elm_src) elm.json build/.mkdir
-	elm make --debug $(elm_main) --output $@
+	elm make $(elm_main) --output $@
 build/dndgrid: $(hs_src) build/.mkdir
 	cabal v2-build
 	find dist-newstyle \
