@@ -72,6 +72,7 @@ data ClientMsg
         }
     | DeleteUnit UnitId
     | SetGridSize Point
+    | ClearBg
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ClientMsg
 instance FromJSON ClientMsg
@@ -130,6 +131,7 @@ data ServerMsg
     | UnitAdded UnitInfo
     | UnitDeleted UnitId
     | RefreshBg !(ID Image)
+    | BgCleared
     | GridSizeChanged Point
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ServerMsg

@@ -63,6 +63,7 @@ type Msg
     | SetGridHeight String
     | SetZoom String
     | SetTab TabId
+    | ClearBg
 
 
 type alias UnitImgData =
@@ -478,7 +479,7 @@ viewAddUnit { nextUnit, zoom } =
 
 
 viewGridSettings : Protocol.GridInfo -> Html Msg
-viewGridSettings { size } =
+viewGridSettings { bgImg, size } =
     tblForm []
         [ h1 [] [ text "Grid Settings" ]
         , labeled input
@@ -497,7 +498,12 @@ viewGridSettings { size } =
             , onInput SetGridWidth
             ]
             []
-        , labeled button "bg" "Background Image" [ onClick (RequestImg Bg) ] [ text "Choose..." ]
+        , case bgImg of
+            Nothing ->
+                labeled button "bg" "Background Image" [ onClick (RequestImg Bg) ] [ text "Choose..." ]
+
+            Just _ ->
+                labeled button "bg" "Background Image" [ onClick ClearBg ] [ text "Clear" ]
         , hr [] []
         , labeled input "zoom" "Zoom %" [ type_ "number", onInput SetZoom ] []
         ]
@@ -724,6 +730,9 @@ update msg model =
                             }
                     )
 
+        ( ClearBg, _ ) ->
+            ( model, Protocol.clearBg )
+
         ( RequestImg purpose, _ ) ->
             ( model
             , File.Select.file [ "image/png" ] (SelectedImg purpose)
@@ -887,6 +896,11 @@ applyServerMsg msg model =
 
         ( Protocol.UnitDeleted unitId, Ready m ) ->
             ( Ready { m | units = Dict.remove (unitIdFromProtocol unitId) m.units }
+            , Cmd.none
+            )
+
+        ( Protocol.BgCleared, Ready ({ grid } as m) ) ->
+            ( Ready { m | grid = { grid | bgImg = Nothing } }
             , Cmd.none
             )
 

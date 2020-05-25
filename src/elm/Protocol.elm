@@ -6,6 +6,7 @@ module Protocol exposing
     , ServerMsg(..)
     , UnitId
     , UnitInfo
+    , clearBg
     , connect
     , disconnect
     , imageUrl
@@ -54,6 +55,7 @@ type ClientMsg
         }
     | DeleteUnit UnitId
     | SetGridSize Point
+    | ClearBg
 
 
 type alias UnitMotion =
@@ -68,6 +70,7 @@ type ServerMsg
     | UnitAdded UnitInfo
     | UnitDeleted UnitId
     | RefreshBg Int
+    | BgCleared
     | GridSizeChanged Point
 
 
@@ -133,6 +136,9 @@ encodeClientMsg msg =
                 , ( "contents", encodePoint sz )
                 ]
 
+        ClearBg ->
+            E.object [ ( "tag", E.string "ClearBg" ) ]
+
 
 encodeBytes : Bytes -> E.Value
 encodeBytes =
@@ -194,6 +200,9 @@ decodeServerMsg =
 
                     "RefreshBg" ->
                         D.map RefreshBg (D.field "contents" D.int)
+
+                    "BgCleared" ->
+                        D.succeed BgCleared
 
                     "GridSizeChanged" ->
                         D.map GridSizeChanged (D.field "contents" decodePoint)
@@ -275,6 +284,11 @@ uploadBg file mkMsg =
         , body = Http.fileBody file
         , expect = Http.expectWhatever mkMsg
         }
+
+
+clearBg : Cmd msg
+clearBg =
+    send ClearBg
 
 
 {-| Send a message to the server

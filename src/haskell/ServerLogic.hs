@@ -106,6 +106,13 @@ handleClientMsg sessionInfo server@(Server{stateVar, db}) clientId clientChan ms
                         st { grid = grid { settings = settings { P.size = size } } }
                 broadcast server $ P.GridSizeChanged size
             DB.setGridSize db size
+        P.ClearBg -> do
+            atomically $ do
+                modifyTVar' stateVar $
+                    \st@ServerState{grid = grid@GridState{settings}} ->
+                        st { grid = grid { settings = settings { P.bgImg = Nothing }}}
+                broadcast server P.BgCleared
+            DB.clearGridBg db
 
 alterUnit :: P.UnitId -> (Maybe P.UnitInfo -> Maybe P.UnitInfo) -> ServerState -> ServerState
 alterUnit id f st@ServerState{grid = g@GridState{units}} =

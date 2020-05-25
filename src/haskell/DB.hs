@@ -18,6 +18,7 @@ module DB
 
     , getGrid
     , setGridBg
+    , clearGridBg
     , setGridSize
     ) where
 
@@ -245,6 +246,17 @@ getImage (Conn c) (P.ID imgId) = do
         |]
         [ ":id" := imgId ]
     pure bytes
+
+clearGridBg :: Conn -> IO ()
+clearGridBg (Conn c) =
+    -- TODO: clear out old images. But make sure we still don't re-use IDs,
+    -- as that could end up in things being erroneously cached.
+    SQL.execute_ c
+        [here|
+            UPDATE grids
+            SET bg_image = NULL
+            WHERE id = 0
+        |]
 
 
 setGridBg :: Conn -> LBS.ByteString -> IO (P.ID P.Image)
