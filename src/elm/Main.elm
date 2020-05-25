@@ -214,8 +214,8 @@ unitGridItem zoom ( id, { loc, name, size, image } ) =
                             ]
                             [ img
                                 [ src <| Protocol.imageUrl image
-                                , style "max-width" "100%"
-                                , style "max-height" "100%"
+                                , style "width" "100%"
+                                , style "height" "100%"
                                 ]
                                 []
                             ]
