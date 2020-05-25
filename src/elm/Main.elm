@@ -3,6 +3,7 @@ module Main exposing (main)
 import Browser
 import Bytes exposing (Bytes)
 import Dict exposing (Dict)
+import Events
 import File exposing (File)
 import File.Select
 import Grid
@@ -64,6 +65,9 @@ type Msg
     | SetZoom String
     | SetTab TabId
     | ClearBg
+      -- Don't do anything. We use this in a couple places where the dom api needs
+      -- an event handler, but we don't actually want it to *do* anything:
+    | IgnoreMsg
 
 
 type alias UnitImgData =
@@ -153,9 +157,6 @@ unitGridItem zoom ( id, { loc, name, size, image } ) =
         imgSize =
             zoomPx (toFloat unitSize * zoom)
 
-        chooseLink =
-            a [ href "#", onClick (ChooseUnit id) ]
-
         linkStyle =
             [ -- Black text with a 50% transparent white background. This lets
               -- the unit's image show up underneath while still giving us some
@@ -187,7 +188,7 @@ unitGridItem zoom ( id, { loc, name, size, image } ) =
                   , item =
                         a
                             ([ href "#"
-                             , onClick (ChooseUnit id)
+                             , Events.onDragStart (ChooseUnit id)
                              , style "display" "block"
                              , style "z-index" "2"
                              , style "position" "relative"
@@ -214,7 +215,7 @@ unitGridItem zoom ( id, { loc, name, size, image } ) =
                   , item =
                         a
                             [ href "#"
-                            , onClick (ChooseUnit id)
+                            , Events.onDragStart (ChooseUnit id)
                             , style "z-index" "1"
                             , style "position" "relative"
                             ]
@@ -526,10 +527,13 @@ viewCell zoom layer contents x y =
 
 
 {-| A transparent "button" that we place over a grid cell,
-because some browsers (chromium) do not recognize onClick events for div
-tags.
+so we can use it as a hook for drop events.
+
+The first argument is the zoom factor for the button.
+The second is a message to send for "drop" events.
+
 -}
-gridButton : Float -> msg -> Html msg
+gridButton : Float -> Msg -> Html Msg
 gridButton zoom msg =
     let
         cellSize =
@@ -542,9 +546,14 @@ gridButton zoom msg =
     -- who can't see it...
     a
         [ href "#"
-        , onClick msg
         , style "height" "100%"
         , style "width" "100%"
+        , Events.onDrop msg
+
+        -- We have to define these two to make this a valid drop target, but
+        -- we don't actually want to do anything in response:
+        , Events.onDragOver IgnoreMsg
+        , Events.onDragEnter IgnoreMsg
         ]
         [ svg
             [ width cellSize
@@ -590,6 +599,9 @@ setGridSize str m updateSize =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model ) of
+        ( IgnoreMsg, _ ) ->
+            ( model, Cmd.none )
+
         ( GotServerMsg (Ok serverMsg), _ ) ->
             applyServerMsg serverMsg model
 
@@ -643,9 +655,6 @@ update msg model =
                 ( Ready
                     { m
                         | tabId = Nothing
-                        , currentUnit =
-                            Just unitId
-                        , units = m.units
                         , nextUnit =
                             { id = m.nextUnit.id + 1
                             , name = ""
