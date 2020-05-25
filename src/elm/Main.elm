@@ -162,6 +162,10 @@ unitGridItem zoom ( id, { loc, name, size, image } ) =
             , style "font-weight" "bold"
             , style "-webkit-text-stroke" "1px white"
             , style "text-decoration" "none"
+
+            -- Serifs make things visually too busy at this scale, especially
+            -- with the stroke outline.
+            , style "font-family" "sans-serif"
             ]
     in
     -- Each unit on the grid is itself layed out using css grid. It uses
