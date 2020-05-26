@@ -5,6 +5,7 @@ module Events exposing
     , onDragOver
     , onDragStart
     , onDrop
+    , onMouseDown
     , onMouseMove
     )
 

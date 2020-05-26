@@ -9,7 +9,7 @@ import File.Select
 import Grid
 import Html exposing (..)
 import Html.Attributes exposing (disabled, for, href, name, placeholder, selected, src, style, type_, value)
-import Html.Events exposing (onClick, onInput)
+import Html.Events exposing (onClick, onInput, onMouseUp)
 import Http
 import Layer
 import Protocol
@@ -68,6 +68,11 @@ type Msg
       -- Don't do anything. We use this in a couple places where the dom api needs
       -- an event handler, but we don't actually want it to *do* anything:
     | IgnoreMsg
+      -- Used for drawing:
+    | MouseDown Events.Point
+    | MouseMove Events.Point
+    | MouseUp
+    | ClearDraw
 
 
 type alias UnitImgData =
@@ -315,7 +320,7 @@ viewTabs m =
 
 viewDraw : Draw -> Html Msg
 viewDraw _ =
-    text "Begin drawing"
+    button [ onClick ClearDraw ] [ text "Clear" ]
 
 
 viewGrid : ReadyModel -> Html Msg
@@ -350,6 +355,21 @@ viewGrid m =
             Dict.toList m.units
                 |> List.map (unitGridItem m.zoom)
 
+        gridMouseEvents =
+            case m.tabId of
+                Just DrawTab ->
+                    case m.draw.currentLine of
+                        Nothing ->
+                            [ Events.onMouseDown MouseDown ]
+
+                        Just _ ->
+                            [ Events.onMouseMove MouseMove
+                            , onMouseUp MouseUp
+                            ]
+
+                _ ->
+                    []
+
         grid =
             { cells
                 | items =
@@ -358,7 +378,7 @@ viewGrid m =
                         ++ cellButtons
             }
     in
-    div [ style "overflow" "scroll" ]
+    div (style "overflow" "scroll" :: gridMouseEvents)
         [ Grid.view
             (bgAttrs m.grid)
             grid
@@ -780,6 +800,64 @@ update msg model =
                             }
                     )
 
+        ( ClearDraw, Ready m ) ->
+            -- TODO: send a message through the server to do this.
+            ( Ready { m | draw = initDraw }
+            , Cmd.none
+            )
+
+        ( MouseDown pos, Ready ({ draw } as m) ) ->
+            ( Ready
+                { m
+                    | draw =
+                        { draw
+                            | currentLine =
+                                Just
+                                    { pos = pos
+                                    , points = []
+                                    }
+                        }
+                }
+            , Cmd.none
+            )
+
+        ( MouseMove pos, Ready ({ draw } as m) ) ->
+            case draw.currentLine of
+                Nothing ->
+                    ( Ready m, Cmd.none )
+
+                Just current ->
+                    ( Ready
+                        { m
+                            | draw =
+                                { draw
+                                    | currentLine =
+                                        Just
+                                            { pos = pos
+                                            , points = current.pos :: current.points
+                                            }
+                                }
+                        }
+                    , Cmd.none
+                    )
+
+        ( MouseUp, Ready ({ draw } as m) ) ->
+            case draw.currentLine of
+                Nothing ->
+                    ( Ready m, Cmd.none )
+
+                Just { pos, points } ->
+                    ( Ready
+                        { m
+                            | draw =
+                                { draw
+                                    | currentLine = Nothing
+                                    , oldLines = (pos :: points) :: draw.oldLines
+                                }
+                        }
+                    , Cmd.none
+                    )
+
         ( ClearBg, _ ) ->
             ( model, Protocol.clearBg )
 
@@ -862,6 +940,13 @@ update msg model =
                 ( model, Cmd.none )
 
 
+initDraw : Draw
+initDraw =
+    { oldLines = []
+    , currentLine = Nothing
+    }
+
+
 applyServerMsg : Protocol.ServerMsg -> Model -> ( Model, Cmd Msg )
 applyServerMsg msg model =
     case ( msg, model ) of
@@ -891,10 +976,7 @@ applyServerMsg msg model =
                 , clientId = yourClientId
                 , grid = grid
                 , zoom = 1
-                , draw =
-                    { oldLines = []
-                    , currentLine = Nothing
-                    }
+                , draw = initDraw
                 }
             , Cmd.none
             )
