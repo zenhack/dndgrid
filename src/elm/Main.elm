@@ -93,6 +93,7 @@ type alias Unit =
 type TabId
     = AddUnit
     | GridSettings
+    | DrawTab
 
 
 type Model
@@ -108,6 +109,17 @@ type alias ReadyModel =
     , clientId : Int
     , grid : Protocol.GridInfo
     , zoom : Float
+    , draw : Draw
+    }
+
+
+type alias Draw =
+    { oldLines : List (List Events.Point)
+    , currentLine :
+        Maybe
+            { pos : Events.Point
+            , points : List Events.Point
+            }
     }
 
 
@@ -287,16 +299,23 @@ viewTabs m =
                 [ ul [ style "list-style" "none" ]
                     [ viewTab m.tabId AddUnit
                     , viewTab m.tabId GridSettings
+                    , viewTab m.tabId DrawTab
                     ]
                 ]
         , div []
             (List.map (\( t, v ) -> viewTabContents m.tabId t (centeredX v))
                 [ ( AddUnit, viewAddUnit m )
                 , ( GridSettings, viewGridSettings m.grid )
+                , ( DrawTab, viewDraw m.draw )
                 ]
                 |> List.concat
             )
         ]
+
+
+viewDraw : Draw -> Html Msg
+viewDraw _ =
+    text "Begin drawing"
 
 
 viewGrid : ReadyModel -> Html Msg
@@ -393,6 +412,9 @@ tabText tabId =
 
         GridSettings ->
             "Grid Settings"
+
+        DrawTab ->
+            "Draw"
 
 
 viewTab : Maybe TabId -> TabId -> Html Msg
@@ -869,6 +891,10 @@ applyServerMsg msg model =
                 , clientId = yourClientId
                 , grid = grid
                 , zoom = 1
+                , draw =
+                    { oldLines = []
+                    , currentLine = Nothing
+                    }
                 }
             , Cmd.none
             )
