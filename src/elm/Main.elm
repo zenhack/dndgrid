@@ -189,6 +189,7 @@ unitGridItem zoom ( id, { loc, name, size, image } ) =
                         a
                             ([ href "#"
                              , Events.onDragStart (ChooseUnit id)
+                             , onClick (ChooseUnit id)
                              , style "display" "block"
                              , style "z-index" "2"
                              , style "position" "relative"
@@ -216,6 +217,7 @@ unitGridItem zoom ( id, { loc, name, size, image } ) =
                         a
                             [ href "#"
                             , Events.onDragStart (ChooseUnit id)
+                            , onClick (ChooseUnit id)
                             , style "z-index" "1"
                             , style "position" "relative"
                             ]
@@ -543,10 +545,10 @@ viewCell zoom layer contents x y =
 
 
 {-| A transparent "button" that we place over a grid cell,
-so we can use it as a hook for drop events.
+so we can use it as a hook for click and drop events.
 
 The first argument is the zoom factor for the button.
-The second is a message to send for "drop" events.
+The second is a message to send for "click" & "drop" events.
 
 -}
 gridButton : Float -> Msg -> Html Msg
@@ -564,6 +566,7 @@ gridButton zoom msg =
         [ href "#"
         , style "height" "100%"
         , style "width" "100%"
+        , onClick msg
         , Events.onDrop msg
 
         -- We have to define these two to make this a valid drop target, but
