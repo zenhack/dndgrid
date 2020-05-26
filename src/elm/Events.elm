@@ -22,7 +22,7 @@ onDragOver msg =
 
 onDrop : msg -> Attribute msg
 onDrop msg =
-    on "drop" (D.succeed msg)
+    preventDefaultOn "drop" (D.succeed ( msg, True ))
 
 
 onChange : (String -> msg) -> Attribute msg
