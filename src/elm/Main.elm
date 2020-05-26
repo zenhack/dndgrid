@@ -210,7 +210,7 @@ unitGridItem zoom ( id, { loc, name, size, image } ) =
                              ]
                                 ++ linkStyle
                             )
-                            [ text "X" ]
+                            [ text "×" ]
                   }
                 , { loc = { x = 1, y = 1, w = 2, h = 2 }
                   , item =
