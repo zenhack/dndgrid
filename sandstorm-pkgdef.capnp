@@ -19,7 +19,7 @@ const pkgdef :Spk.PackageDefinition = (
 
     appTitle = (defaultText = "Battle Grid"),
 
-    appVersion = 2,  # Increment this for every release.
+    appVersion = 3,  # Increment this for every release.
 
     appMarketingVersion = (defaultText = "0.0.0"),
     # Human-readable representation of appVersion. Should match the way you
