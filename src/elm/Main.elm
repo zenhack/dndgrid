@@ -348,7 +348,12 @@ viewDraw size { currentLine, oldLines } =
     in
     lines
         |> List.map Lines.reverse
-        |> Lines.linesToSvg { cellSize = cellSizePx, gridSize = size }
+        |> Lines.linesToSvg
+            [ Layer.layer Layer.gridPassive
+            , style "width" "100%"
+            , style "height" "100%"
+            ]
+            { cellSize = cellSizePx, gridSize = size }
 
 
 viewGrid : ReadyModel -> Html Msg

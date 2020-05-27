@@ -34,15 +34,10 @@ reverse ( x, xs ) =
             reverse ( x, xs )
 
 
-linesToSvg : Config -> List Line -> Html msg
-linesToSvg config lines =
+linesToSvg : List (Html.Attribute msg) -> Config -> List Line -> Html msg
+linesToSvg attrs config lines =
     svg
-        [ -- TODO: cleanup: setting the layer here is a bit ugly; would make more
-          -- sense to do it in code that cares about the overall grid.
-          Layer.layer Layer.gridPassive
-        , Html.Attributes.style "width" "100%"
-        , Html.Attributes.style "height" "100%"
-        ]
+        attrs
         (List.map (lineToPath config) lines)
 
 
