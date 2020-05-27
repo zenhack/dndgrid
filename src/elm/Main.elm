@@ -335,9 +335,12 @@ viewDrawTab _ =
     button [ onClick ClearDraw ] [ text "Clear" ]
 
 
-viewDraw : Lines.Point -> Draw -> Html msg
-viewDraw size { currentLine, oldLines } =
+viewDraw : Float -> Lines.Point -> Draw -> Html msg
+viewDraw zoom size { currentLine, oldLines } =
     let
+        wh n =
+            String.fromInt (floor (zoom * cellSizePx * toFloat n)) ++ "px"
+
         lines =
             case currentLine of
                 Nothing ->
@@ -350,17 +353,19 @@ viewDraw size { currentLine, oldLines } =
         |> List.map Lines.reverse
         |> Lines.linesToSvg
             [ Layer.layer Layer.gridPassive
-            , style "width" "100%"
-            , style "height" "100%"
+            , style "width" (wh size.x)
+            , style "height" (wh size.y)
             ]
-            { cellSize = cellSizePx, gridSize = size }
+            { cellSize = cellSizePx
+            , gridSize = size
+            }
 
 
 viewGrid : ReadyModel -> Html Msg
 viewGrid m =
     let
         draw =
-            { item = viewDraw m.grid.size m.draw
+            { item = viewDraw m.zoom m.grid.size m.draw
             , loc =
                 { x = 1
                 , y = 1
