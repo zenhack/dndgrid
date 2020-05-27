@@ -116,6 +116,12 @@ handleClientMsg sessionInfo server@(Server{stateVar, db}) clientId clientChan ms
                         st { grid = grid { settings = settings { P.bgImg = Nothing }}}
                 broadcast server P.BgCleared
             DB.clearGridBg db
+        P.ClearDrawing ->
+            atomically $
+                broadcast server P.DrawingCleared
+        P.AddLine points ->
+            atomically $
+                broadcast server (P.LineAdded points)
 
 alterUnit :: P.UnitId -> (Maybe P.UnitInfo -> Maybe P.UnitInfo) -> ServerState -> ServerState
 alterUnit id f st@ServerState{grid = g@GridState{units}} =

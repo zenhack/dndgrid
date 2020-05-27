@@ -6,7 +6,9 @@ module Protocol exposing
     , ServerMsg(..)
     , UnitId
     , UnitInfo
+    , addLine
     , clearBg
+    , clearDrawing
     , connect
     , disconnect
     , imageUrl
@@ -32,9 +34,15 @@ import WebSocket
 -- TYPES
 
 
-type alias Point =
-    { x : Int
-    , y : Int
+type alias Point a =
+    { x : a
+    , y : a
+    }
+
+
+type alias PixelPoint =
+    { cell : Point Int
+    , px : Point Float
     }
 
 
@@ -50,17 +58,19 @@ type ClientMsg
         { localId : Int
         , name : String
         , size : Int
-        , loc : Point
+        , loc : Point Int
         , imageData : Bytes
         }
     | DeleteUnit UnitId
-    | SetGridSize Point
+    | SetGridSize (Point Int)
     | ClearBg
+    | AddLine (List PixelPoint)
+    | ClearDrawing
 
 
 type alias UnitMotion =
     { unitId : UnitId
-    , loc : Point
+    , loc : Point Int
     }
 
 
@@ -71,7 +81,9 @@ type ServerMsg
     | UnitDeleted UnitId
     | RefreshBg Int
     | BgCleared
-    | GridSizeChanged Point
+    | GridSizeChanged (Point Int)
+    | LineAdded (List PixelPoint)
+    | DrawingCleared
 
 
 type alias WelcomeMsg =
@@ -83,7 +95,7 @@ type alias WelcomeMsg =
 
 type alias GridInfo =
     { bgImg : Maybe Int
-    , size : Point
+    , size : Point Int
     }
 
 
@@ -91,7 +103,7 @@ type alias UnitInfo =
     { id : UnitId
     , name : String
     , size : Int
-    , loc : Point
+    , loc : Point Int
     , image : Int
     }
 
@@ -103,6 +115,22 @@ type Error
 
 
 -- ENCODERS
+
+
+encodePixelPoint : PixelPoint -> E.Value
+encodePixelPoint { cell, px } =
+    E.object
+        [ ( "cell", encodePoint E.int cell )
+        , ( "px", encodePoint E.float px )
+        ]
+
+
+encodePoint : (a -> E.Value) -> Point a -> E.Value
+encodePoint encode { x, y } =
+    E.object
+        [ ( "x", encode x )
+        , ( "y", encode y )
+        ]
 
 
 encodeClientMsg : ClientMsg -> E.Value
@@ -120,7 +148,7 @@ encodeClientMsg msg =
                 , ( "localId", E.int localId )
                 , ( "name", E.string name )
                 , ( "size", E.int size )
-                , ( "loc", encodePoint loc )
+                , ( "loc", encodePoint E.int loc )
                 , ( "imageData", encodeBytes imageData )
                 ]
 
@@ -133,8 +161,17 @@ encodeClientMsg msg =
         SetGridSize sz ->
             E.object
                 [ ( "tag", E.string "SetGridSize" )
-                , ( "contents", encodePoint sz )
+                , ( "contents", encodePoint E.int sz )
                 ]
+
+        AddLine points ->
+            E.object
+                [ ( "tag", E.string "AddLine" )
+                , ( "contents", E.list encodePixelPoint points )
+                ]
+
+        ClearDrawing ->
+            E.object [ ( "tag", E.string "ClearDrawing" ) ]
 
         ClearBg ->
             E.object [ ( "tag", E.string "ClearBg" ) ]
@@ -153,7 +190,7 @@ encodeBytes =
 encodeUnitMotion { unitId, loc } =
     E.object
         [ ( "unitId", encodeUnitId unitId )
-        , ( "loc", encodePoint loc )
+        , ( "loc", encodePoint E.int loc )
         ]
 
 
@@ -169,11 +206,18 @@ encodeUnitId { clientId, localId } =
 -- DECODERS
 
 
+decodePixelPoint : D.Decoder PixelPoint
+decodePixelPoint =
+    D.map2 PixelPoint
+        (D.field "cell" (decodePoint D.int))
+        (D.field "px" (decodePoint D.float))
+
+
 decodeUnitMotion : D.Decoder UnitMotion
 decodeUnitMotion =
     D.map2 UnitMotion
         (D.field "unitId" decodeUnitId)
-        (D.field "loc" decodePoint)
+        (D.field "loc" (decodePoint D.int))
 
 
 decodeServerMsg : D.Decoder ServerMsg
@@ -205,7 +249,13 @@ decodeServerMsg =
                         D.succeed BgCleared
 
                     "GridSizeChanged" ->
-                        D.map GridSizeChanged (D.field "contents" decodePoint)
+                        D.map GridSizeChanged (D.field "contents" (decodePoint D.int))
+
+                    "LineAdded" ->
+                        D.map LineAdded (D.field "contents" (D.list decodePixelPoint))
+
+                    "DrawingCleared" ->
+                        D.succeed DrawingCleared
 
                     _ ->
                         D.fail <| "unknown tag: " ++ tag
@@ -215,7 +265,7 @@ decodeServerMsg =
 decodeGridInfo =
     D.map2 GridInfo
         (D.field "bgImg" (D.nullable D.int))
-        (D.field "size" decodePoint)
+        (D.field "size" (decodePoint D.int))
 
 
 decodeUnitInfo : D.Decoder UnitInfo
@@ -224,23 +274,15 @@ decodeUnitInfo =
         (D.field "id" decodeUnitId)
         (D.field "name" D.string)
         (D.field "size" D.int)
-        (D.field "loc" decodePoint)
+        (D.field "loc" (decodePoint D.int))
         (D.field "image" D.int)
 
 
-decodePoint : D.Decoder Point
-decodePoint =
+decodePoint : D.Decoder a -> D.Decoder (Point a)
+decodePoint coord =
     D.map2 Point
-        (D.field "x" D.int)
-        (D.field "y" D.int)
-
-
-encodePoint : Point -> E.Value
-encodePoint { x, y } =
-    E.object
-        [ ( "x", E.int x )
-        , ( "y", E.int y )
-        ]
+        (D.field "x" coord)
+        (D.field "y" coord)
 
 
 decodeUnitId : D.Decoder UnitId
@@ -289,6 +331,16 @@ uploadBg file mkMsg =
 clearBg : Cmd msg
 clearBg =
     send ClearBg
+
+
+addLine : List PixelPoint -> Cmd msg
+addLine points =
+    send <| AddLine points
+
+
+clearDrawing : Cmd msg
+clearDrawing =
+    send ClearDrawing
 
 
 {-| Send a message to the server

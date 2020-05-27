@@ -161,7 +161,7 @@ listUnits (Conn c) = do
         ]
 
 
-setUnitLoc :: Conn -> P.UnitId -> P.Point -> IO ()
+setUnitLoc :: Conn -> P.UnitId -> P.Point Int -> IO ()
 setUnitLoc (Conn c) P.UnitId{clientId, localId} P.Point{x, y} =
     SQL.executeNamed c
         [here|
@@ -287,7 +287,7 @@ getGrid (Conn c) = do
         }
 
 
-setGridSize :: Conn -> P.Point -> IO ()
+setGridSize :: Conn -> P.Point Int -> IO ()
 setGridSize (Conn c) P.Point{P.x, P.y} =
     SQL.executeNamed c
         [here|

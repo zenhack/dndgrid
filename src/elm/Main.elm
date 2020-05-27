@@ -51,7 +51,7 @@ unitIdToProtocol ( clientId, localId ) =
 
 type Msg
     = ChooseUnit UnitID
-    | ChooseSquare Protocol.Point
+    | ChooseSquare (Protocol.Point Int)
     | SetUnitName String
     | SetUnitSize String
     | DeployUnit
@@ -97,7 +97,7 @@ type ImgPurpose
 
 
 type alias Unit =
-    { loc : Protocol.Point
+    { loc : Protocol.Point Int
     , name : String
     , size : Int
     , image : Int
@@ -746,7 +746,7 @@ gridButton zoom attrs =
 setGridSize :
     String
     -> ReadyModel
-    -> (Int -> Protocol.Point -> Protocol.Point)
+    -> (Int -> Protocol.Point Int -> Protocol.Point Int)
     -> ( Model, Cmd Msg )
 setGridSize str m updateSize =
     case String.toInt str of
@@ -916,8 +916,8 @@ update msg model =
 
         ( ClearDraw, Ready m ) ->
             -- TODO: send a message through the server to do this.
-            ( Ready { m | draw = initDraw }
-            , Cmd.none
+            ( Ready m
+            , Protocol.clearDrawing
             )
 
         ( StartDraw pos, Ready ({ draw } as m) ) ->
@@ -961,15 +961,8 @@ update msg model =
                     ( Ready m, Cmd.none )
 
                 Just { pos, points } ->
-                    ( Ready
-                        { m
-                            | draw =
-                                { draw
-                                    | currentLine = Nothing
-                                    , oldLines = ( pos, points ) :: draw.oldLines
-                                }
-                        }
-                    , Cmd.none
+                    ( Ready { m | draw = { draw | currentLine = Nothing } }
+                    , Protocol.addLine (pos :: points)
                     )
 
         ( ClearBg, _ ) ->
@@ -1151,6 +1144,20 @@ applyServerMsg msg model =
 
         ( Protocol.BgCleared, Ready ({ grid } as m) ) ->
             ( Ready { m | grid = { grid | bgImg = Nothing } }
+            , Cmd.none
+            )
+
+        ( Protocol.DrawingCleared, Ready ({ draw } as m) ) ->
+            ( Ready { m | draw = { draw | oldLines = [] } }
+            , Cmd.none
+            )
+
+        ( Protocol.LineAdded [], Ready m ) ->
+            -- TODO: this should be impossible; rule it out statically.
+            ( Ready m, Cmd.none )
+
+        ( Protocol.LineAdded (p :: ps), Ready ({ draw } as m) ) ->
+            ( Ready { m | draw = { draw | oldLines = ( p, ps ) :: draw.oldLines } }
             , Cmd.none
             )
 

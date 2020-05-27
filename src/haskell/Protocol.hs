@@ -55,10 +55,18 @@ data Unit
 data LocalUnit
 data Image
 
-data Point = Point { x :: !Int, y :: !Int }
+data Point a = Point { x :: !a, y :: !a }
     deriving(Show, Read, Eq, Ord, Generic)
-instance ToJSON Point
-instance FromJSON Point
+instance ToJSON a => ToJSON (Point a)
+instance FromJSON a => FromJSON (Point a)
+
+data PixelPoint = PixelPoint
+    { cell :: Point Int
+    , px   :: Point Double
+    }
+    deriving(Show, Read, Eq, Ord, Generic)
+instance ToJSON PixelPoint
+instance FromJSON PixelPoint
 
 -- Messages sent from the client to the server.
 data ClientMsg
@@ -67,12 +75,15 @@ data ClientMsg
         { localId   :: !(ID LocalUnit)
         , name      :: LT.Text
         , size      :: !Int
-        , loc       :: Point
+        , loc       :: Point Int
         , imageData :: Base64LBS
         }
     | DeleteUnit UnitId
-    | SetGridSize Point
+    | SetGridSize (Point Int)
     | ClearBg
+    -- Drawing:
+    | AddLine [PixelPoint]
+    | ClearDrawing
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ClientMsg
 instance FromJSON ClientMsg
@@ -100,7 +111,7 @@ instance FromJSON Base64LBS where
 
 data UnitMotion = UnitMotion
     { unitId :: !UnitId
-    , loc    :: Point
+    , loc    :: Point Int
     }
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON UnitMotion
@@ -114,7 +125,7 @@ instance WebSocketsData (Maybe ClientMsg) where
 
 data GridInfo = GridInfo
     { bgImg :: Maybe (ID Image)
-    , size  :: Point
+    , size  :: Point Int
     }
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON GridInfo
@@ -132,7 +143,9 @@ data ServerMsg
     | UnitDeleted UnitId
     | RefreshBg !(ID Image)
     | BgCleared
-    | GridSizeChanged Point
+    | GridSizeChanged (Point Int)
+    | DrawingCleared
+    | LineAdded [PixelPoint]
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON ServerMsg
 instance FromJSON ServerMsg
@@ -144,7 +157,7 @@ instance WebSocketsData (Maybe ServerMsg) where
     fromDataMessage = Aeson.decode . fromDataMessage
 
 data UnitInfo = UnitInfo
-    { loc   :: Point
+    { loc   :: Point Int
     , id    :: UnitId
     , name  :: LT.Text
     , size  :: !Int
