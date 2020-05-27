@@ -26,6 +26,7 @@ staticFiles =
     [ ("/", "static/app.html", "text/html")
     , ("/dndgrid.js", "build/dndgrid.js", "application/javascript")
     , ("/setup.js", "static/setup.js", "application/javascript")
+    , ("/default-unit.png", "static/default-unit.png", "image/png")
     ]
 
 makeScottyApp :: DB.Conn -> Server -> IO Application

@@ -100,7 +100,7 @@ type alias Unit =
     { loc : Protocol.Point Int
     , name : String
     , size : Int
-    , image : Int
+    , image : Maybe Int
     }
 
 
@@ -262,7 +262,10 @@ unitGridItem zoom ( id, { loc, name, size, image } ) =
                             , style "position" "relative"
                             ]
                             [ img
-                                [ src <| Protocol.imageUrl image
+                                [ src <|
+                                    (Maybe.map Protocol.imageUrl image
+                                        |> Maybe.withDefault "/default-unit.png"
+                                    )
                                 , style "width" "100%"
                                 , style "height" "100%"
                                 ]
@@ -630,16 +633,7 @@ viewAddUnit { nextUnit, zoom } =
                 |> Maybe.withDefault []
             , [ labeled button "image" "Image" [ onClick (RequestImg UnitSprite) ] [ text "Choose..." ]
               , button
-                    [ onClick DeployUnit
-                    , disabled
-                        (case imgData of
-                            Nothing ->
-                                True
-
-                            Just _ ->
-                                False
-                        )
-                    ]
+                    [ onClick DeployUnit ]
                     [ text "Add" ]
               ]
             ]
@@ -837,23 +831,16 @@ update msg model =
                             , img = Nothing
                             }
                     }
-                , case getUnitImgData m.nextUnit of
-                    Just { bytes } ->
-                        Protocol.send <|
-                            Protocol.AddUnit
-                                { localId = m.nextUnit.id
-                                , name = m.nextUnit.name
-                                , size = m.nextUnit.size
-                                , loc = loc
-                                , imageData = bytes
-                                }
-
-                    Nothing ->
-                        -- The only way this can happen if the user somehow
-                        -- clicked the 'Add Unit' before the image data was
-                        -- ready. But in that case the button should be
-                        -- disabled.
-                        Cmd.none
+                , Protocol.send <|
+                    Protocol.AddUnit
+                        { localId = m.nextUnit.id
+                        , name = m.nextUnit.name
+                        , size = m.nextUnit.size
+                        , loc = loc
+                        , imageData =
+                            getUnitImgData m.nextUnit
+                                |> Maybe.map .bytes
+                        }
                 )
 
         ( SetUnitName name, Ready m ) ->

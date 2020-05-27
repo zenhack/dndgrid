@@ -191,13 +191,13 @@ addUnit
     :: Conn
     -> P.UnitId
     -> Maybe LT.Text
-    -> LBS.ByteString
+    -> Maybe LBS.ByteString
     -> LT.Text
     -> Int
-    -> IO (P.ID P.Image)
+    -> IO (Maybe (P.ID P.Image))
 addUnit conn@(Conn c) P.UnitId{clientId, localId} owner img name size =
     SQL.withTransaction c $ do
-        imgId <- saveImageNoTx conn img
+        imgId <- traverse (saveImageNoTx conn) img
         SQL.executeNamed c
             [here|
                 INSERT INTO units(owner, name, img_id, client_id, local_Id, size)

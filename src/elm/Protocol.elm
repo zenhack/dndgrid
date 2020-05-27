@@ -59,7 +59,7 @@ type ClientMsg
         , name : String
         , size : Int
         , loc : Point Int
-        , imageData : Bytes
+        , imageData : Maybe Bytes
         }
     | DeleteUnit UnitId
     | SetGridSize (Point Int)
@@ -105,7 +105,7 @@ type alias UnitInfo =
     , name : String
     , size : Int
     , loc : Point Int
-    , image : Int
+    , image : Maybe Int
     }
 
 
@@ -150,7 +150,10 @@ encodeClientMsg msg =
                 , ( "name", E.string name )
                 , ( "size", E.int size )
                 , ( "loc", encodePoint E.int loc )
-                , ( "imageData", encodeBytes imageData )
+                , ( "imageData"
+                  , Maybe.map encodeBytes imageData
+                        |> Maybe.withDefault E.null
+                  )
                 ]
 
         DeleteUnit unitId ->
@@ -277,7 +280,7 @@ decodeUnitInfo =
         (D.field "name" D.string)
         (D.field "size" D.int)
         (D.field "loc" (decodePoint D.int))
-        (D.field "image" D.int)
+        (D.maybe (D.field "image" D.int))
 
 
 decodePoint : D.Decoder a -> D.Decoder (Point a)

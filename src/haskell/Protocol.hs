@@ -77,7 +77,7 @@ data ClientMsg
         , name      :: LT.Text
         , size      :: !Int
         , loc       :: Point Int
-        , imageData :: Base64LBS
+        , imageData :: Maybe Base64LBS
         }
     | DeleteUnit UnitId
     | SetGridSize (Point Int)
@@ -163,7 +163,7 @@ data UnitInfo = UnitInfo
     , id    :: UnitId
     , name  :: LT.Text
     , size  :: !Int
-    , image :: ID Image
+    , image :: Maybe (ID Image)
     }
     deriving(Show, Read, Eq, Ord, Generic)
 instance ToJSON UnitInfo
