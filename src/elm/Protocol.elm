@@ -90,6 +90,7 @@ type alias WelcomeMsg =
     { yourClientId : Int
     , unitInfo : List UnitInfo
     , grid : GridInfo
+    , lines : List (List PixelPoint)
     }
 
 
@@ -228,10 +229,11 @@ decodeServerMsg =
                 case tag of
                     "Welcome" ->
                         D.map Welcome <|
-                            D.map3 WelcomeMsg
+                            D.map4 WelcomeMsg
                                 (D.field "yourClientId" D.int)
                                 (D.field "unitInfo" (D.list decodeUnitInfo))
                                 (D.field "grid" decodeGridInfo)
+                                (D.field "lines" (D.list (D.list decodePixelPoint)))
 
                     "UnitMoved" ->
                         D.map UnitMoved (D.field "contents" decodeUnitMotion)

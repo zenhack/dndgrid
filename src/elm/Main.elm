@@ -1047,17 +1047,10 @@ update msg model =
                 ( model, Cmd.none )
 
 
-initDraw : Draw
-initDraw =
-    { oldLines = []
-    , currentLine = Nothing
-    }
-
-
 applyServerMsg : Protocol.ServerMsg -> Model -> ( Model, Cmd Msg )
 applyServerMsg msg model =
     case ( msg, model ) of
-        ( Protocol.Welcome { yourClientId, unitInfo, grid }, _ ) ->
+        ( Protocol.Welcome { yourClientId, unitInfo, grid, lines }, _ ) ->
             ( Ready
                 { currentUnit = Nothing
                 , tabId = Nothing
@@ -1083,7 +1076,22 @@ applyServerMsg msg model =
                 , clientId = yourClientId
                 , grid = grid
                 , zoom = 1
-                , draw = initDraw
+                , draw =
+                    { currentLine = Nothing
+                    , oldLines =
+                        -- TODO: change the types to avoid empty
+                        -- lists statically.
+                        lines
+                            |> List.filterMap
+                                (\line ->
+                                    case line of
+                                        [] ->
+                                            Nothing
+
+                                        p :: ps ->
+                                            Just ( p, ps )
+                                )
+                    }
                 }
             , Cmd.none
             )

@@ -11,7 +11,7 @@ module ServerLogic
     , setBg
     ) where
 
-import Zhp
+import Zhp hiding (lines)
 
 import Control.Concurrent.Async (race_)
 import Control.Concurrent.STM
@@ -56,6 +56,7 @@ handleClient sessionInfo server@(Server{stateVar, db}) clientConn = do
             { P.grid = settings (grid st)
             , P.yourClientId = clientId
             , P.unitInfo = M.elems $ units $ grid st
+            , P.lines = lines st
             }
         pure clientId
 
@@ -116,12 +117,13 @@ handleClientMsg sessionInfo server@(Server{stateVar, db}) clientId clientChan ms
                         st { grid = grid { settings = settings { P.bgImg = Nothing }}}
                 broadcast server P.BgCleared
             DB.clearGridBg db
-        P.ClearDrawing ->
-            atomically $
-                broadcast server P.DrawingCleared
-        P.AddLine points ->
-            atomically $
-                broadcast server (P.LineAdded points)
+        P.ClearDrawing -> atomically $ do
+            modifyTVar' stateVar $ \st -> st { lines = [] }
+            broadcast server P.DrawingCleared
+        P.AddLine points -> atomically $ do
+            modifyTVar' stateVar $ \st@ServerState{lines} ->
+                st { lines = points : lines }
+            broadcast server (P.LineAdded points)
 
 alterUnit :: P.UnitId -> (Maybe P.UnitInfo -> Maybe P.UnitInfo) -> ServerState -> ServerState
 alterUnit id f st@ServerState{grid = g@GridState{units}} =
@@ -146,6 +148,7 @@ data ServerState = ServerState
     { grid          :: GridState
     , nextClientId  :: !(P.ID P.Client)
     , clients       :: M.Map (P.ID P.Client) (TChan P.ServerMsg)
+    , lines         :: [[P.PixelPoint]]
     , broadcastChan :: TChan P.ServerMsg
     }
 
@@ -169,5 +172,6 @@ newServer db = do
             , nextClientId
             , clients = M.empty
             , broadcastChan = ch
+            , lines = []
             }
         pure Server{stateVar, db}

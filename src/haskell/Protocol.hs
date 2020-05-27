@@ -8,6 +8,7 @@
 module Protocol
     ( ClientMsg(..)
     , Point(..)
+    , PixelPoint(..)
     , ID(..)
     , ServerMsg(..)
     , Client(..)
@@ -137,6 +138,7 @@ data ServerMsg
         { yourClientId :: !(ID Client)
         , unitInfo     :: [UnitInfo]
         , grid         :: GridInfo
+        , lines        :: [[PixelPoint]]
         }
     | UnitMoved UnitMotion
     | UnitAdded UnitInfo
