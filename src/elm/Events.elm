@@ -62,4 +62,4 @@ but it doesn't provide access to the location, so we have our own.
 -}
 onMouseDown : (Point -> msg) -> Attribute msg
 onMouseDown mkMsg =
-    on "mousedown" (D.map mkMsg decodePoint)
+    preventDefaultOn "mousedown" (D.map (\p -> ( mkMsg p, True )) decodePoint)

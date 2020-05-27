@@ -12,6 +12,7 @@ import Html.Attributes exposing (disabled, for, href, name, placeholder, selecte
 import Html.Events exposing (onClick, onInput, onMouseUp)
 import Http
 import Layer
+import Lines exposing (Line)
 import Protocol
 import Svg exposing (svg)
 import Svg.Attributes exposing (height, viewBox, width)
@@ -119,11 +120,11 @@ type alias ReadyModel =
 
 
 type alias Draw =
-    { oldLines : List (List Events.Point)
+    { oldLines : List Line
     , currentLine :
         Maybe
-            { pos : Events.Point
-            , points : List Events.Point
+            { pos : Lines.Point
+            , points : List Lines.Point
             }
     }
 
@@ -163,6 +164,13 @@ cellSizePx =
 zoomPx : Float -> String
 zoomPx zoom =
     String.fromInt (floor (zoom * cellSizePx)) ++ "px"
+
+
+subCellPoint : Lines.Point -> Lines.Point -> Lines.Point
+subCellPoint cellXY pxXY =
+    { x = cellXY.x * 96 + pxXY.x
+    , y = cellXY.y * 96 + pxXY.y
+    }
 
 
 unitGridItem : Float -> ( UnitID, Unit ) -> Grid.GridItem (Html Msg)
@@ -311,21 +319,47 @@ viewTabs m =
             (List.map (\( t, v ) -> viewTabContents m.tabId t (centeredX v))
                 [ ( AddUnit, viewAddUnit m )
                 , ( GridSettings, viewGridSettings m.grid )
-                , ( DrawTab, viewDraw m.draw )
+                , ( DrawTab, viewDrawTab m.draw )
                 ]
                 |> List.concat
             )
         ]
 
 
-viewDraw : Draw -> Html Msg
-viewDraw _ =
+viewDrawTab : Draw -> Html Msg
+viewDrawTab _ =
     button [ onClick ClearDraw ] [ text "Clear" ]
+
+
+viewDraw : Lines.Point -> Draw -> Html msg
+viewDraw size { currentLine, oldLines } =
+    let
+        lines =
+            case currentLine of
+                Nothing ->
+                    oldLines
+
+                Just { pos, points } ->
+                    ( pos, points ) :: oldLines
+    in
+    lines
+        |> List.map Lines.reverse
+        |> Lines.linesToSvg { cellSize = cellSizePx, gridSize = size }
 
 
 viewGrid : ReadyModel -> Html Msg
 viewGrid m =
     let
+        draw =
+            { item = viewDraw m.grid.size m.draw
+            , loc =
+                { x = 1
+                , y = 1
+                , w = m.grid.size.x
+                , h = m.grid.size.y
+                }
+            }
+
         cells =
             Grid.fromFunction
                 (viewCell m.zoom Layer.gridPassive (div [] []))
@@ -333,17 +367,17 @@ viewGrid m =
                 m.grid.size.y
 
         cellButtons =
-            case m.currentUnit of
-                Nothing ->
-                    []
-
-                Just _ ->
+            case ( m.currentUnit, m.tabId ) of
+                ( Just _, _ ) ->
                     Grid.fromFunction
                         (\x y ->
                             viewCell
                                 m.zoom
                                 Layer.gridActive
-                                (gridButton m.zoom (ChooseSquare { x = x, y = y }))
+                                (gridButton
+                                    m.zoom
+                                    (unitButtonAttrs (ChooseSquare { x = x, y = y }))
+                                )
                                 x
                                 y
                         )
@@ -351,34 +385,64 @@ viewGrid m =
                         m.grid.size.y
                         |> .items
 
-        units =
-            Dict.toList m.units
-                |> List.map (unitGridItem m.zoom)
+                ( _, Just DrawTab ) ->
+                    -- TODO: reduce copypasta.
+                    Grid.fromFunction
+                        (\x y ->
+                            viewCell
+                                m.zoom
+                                Layer.gridActive
+                                (gridButton
+                                    m.zoom
+                                    (case m.draw.currentLine of
+                                        Nothing ->
+                                            [ Events.onMouseDown
+                                                (\pxXY ->
+                                                    MouseDown
+                                                        (subCellPoint
+                                                            { x = x - 1, y = y - 1 }
+                                                            pxXY
+                                                        )
+                                                )
+                                            ]
 
-        gridMouseEvents =
-            case m.tabId of
-                Just DrawTab ->
-                    case m.draw.currentLine of
-                        Nothing ->
-                            [ Events.onMouseDown MouseDown ]
-
-                        Just _ ->
-                            [ Events.onMouseMove MouseMove
-                            , onMouseUp MouseUp
-                            ]
+                                        Just _ ->
+                                            [ Events.onMouseMove
+                                                (\pxXY ->
+                                                    MouseMove
+                                                        (subCellPoint
+                                                            { x = x - 1, y = y - 1 }
+                                                            pxXY
+                                                        )
+                                                )
+                                            , onMouseUp MouseUp
+                                            ]
+                                    )
+                                )
+                                x
+                                y
+                        )
+                        m.grid.size.x
+                        m.grid.size.y
+                        |> .items
 
                 _ ->
                     []
 
+        units =
+            Dict.toList m.units
+                |> List.map (unitGridItem m.zoom)
+
         grid =
             { cells
                 | items =
-                    cells.items
+                    draw
+                        :: cells.items
                         ++ units
                         ++ cellButtons
             }
     in
-    div (style "overflow" "scroll" :: gridMouseEvents)
+    div [ style "overflow" "scroll" ]
         [ Grid.view
             (bgAttrs m.grid)
             grid
@@ -586,15 +650,28 @@ viewCell zoom layer contents x y =
             [ contents ]
 
 
+unitButtonAttrs : Msg -> List (Attribute Msg)
+unitButtonAttrs msg =
+    [ onClick msg
+    , Events.onDrop msg
+
+    -- We have to define these two to make this a valid drop target, but
+    -- we don't actually want to do anything in response:
+    , Events.onDragOver IgnoreMsg
+    , Events.onDragEnter IgnoreMsg
+    ]
+
+
 {-| A transparent "button" that we place over a grid cell,
-so we can use it as a hook for click and drop events.
+so we can use it as a hook for mouse events.
 
 The first argument is the zoom factor for the button.
-The second is a message to send for "click" & "drop" events.
+The second is a list of attributes to add to the clickable
+element.
 
 -}
-gridButton : Float -> Msg -> Html Msg
-gridButton zoom msg =
+gridButton : Float -> List (Attribute msg) -> Html msg
+gridButton zoom attrs =
     let
         cellSize =
             zoomPx zoom
@@ -605,17 +682,12 @@ gridButton zoom msg =
     -- how to go about making this useful for folks
     -- who can't see it...
     a
-        [ href "#"
-        , style "height" "100%"
-        , style "width" "100%"
-        , onClick msg
-        , Events.onDrop msg
-
-        -- We have to define these two to make this a valid drop target, but
-        -- we don't actually want to do anything in response:
-        , Events.onDragOver IgnoreMsg
-        , Events.onDragEnter IgnoreMsg
-        ]
+        ([ href "#"
+         , style "height" "100%"
+         , style "width" "100%"
+         ]
+            ++ attrs
+        )
         [ svg
             [ width cellSize
             , height cellSize
@@ -852,7 +924,7 @@ update msg model =
                             | draw =
                                 { draw
                                     | currentLine = Nothing
-                                    , oldLines = (pos :: points) :: draw.oldLines
+                                    , oldLines = ( pos, points ) :: draw.oldLines
                                 }
                         }
                     , Cmd.none
