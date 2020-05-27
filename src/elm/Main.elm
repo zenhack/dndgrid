@@ -166,10 +166,14 @@ zoomPx zoom =
     String.fromInt (floor (zoom * cellSizePx)) ++ "px"
 
 
-subCellPoint : Lines.Point -> Lines.Point -> Lines.Point
-subCellPoint cellXY pxXY =
-    { x = cellXY.x * 96 + pxXY.x
-    , y = cellXY.y * 96 + pxXY.y
+subCellPoint : Float -> Lines.Point -> Lines.Point -> Lines.Point
+subCellPoint zoom cellXY pxXY =
+    let
+        px =
+            floor (zoom * cellSizePx)
+    in
+    { x = cellXY.x * px + pxXY.x
+    , y = cellXY.y * px + pxXY.y
     }
 
 
@@ -400,6 +404,7 @@ viewGrid m =
                                                 (\pxXY ->
                                                     MouseDown
                                                         (subCellPoint
+                                                            m.zoom
                                                             { x = x - 1, y = y - 1 }
                                                             pxXY
                                                         )
@@ -411,6 +416,7 @@ viewGrid m =
                                                 (\pxXY ->
                                                     MouseMove
                                                         (subCellPoint
+                                                            m.zoom
                                                             { x = x - 1, y = y - 1 }
                                                             pxXY
                                                         )
