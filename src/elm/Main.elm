@@ -70,10 +70,18 @@ type Msg
       -- an event handler, but we don't actually want it to *do* anything:
     | IgnoreMsg
       -- Used for drawing:
-    | MouseDown Events.Point
-    | MouseMove Events.Point
-    | MouseUp
+    | StartDraw DrawPoint
+    | MoveDraw DrawPoint
+    | StopDraw
     | ClearDraw
+
+
+{-| A point (pixel) on the grid.
+-}
+type alias DrawPoint =
+    { cell : { x : Int, y : Int } -- The cell on the grid.
+    , px : { x : Float, y : Float } -- coordinates within the cell, in range [0,1]
+    }
 
 
 type alias UnitImgData =
@@ -120,11 +128,11 @@ type alias ReadyModel =
 
 
 type alias Draw =
-    { oldLines : List Line
+    { oldLines : List ( DrawPoint, List DrawPoint )
     , currentLine :
         Maybe
-            { pos : Lines.Point
-            , points : List Lines.Point
+            { pos : DrawPoint
+            , points : List DrawPoint
             }
     }
 
@@ -166,14 +174,17 @@ zoomPx zoom =
     String.fromInt (floor (zoom * cellSizePx)) ++ "px"
 
 
-subCellPoint : Float -> Lines.Point -> Lines.Point -> Lines.Point
+subCellPoint : Float -> Lines.Point -> Lines.Point -> DrawPoint
 subCellPoint zoom cellXY pxXY =
     let
-        px =
-            floor (zoom * cellSizePx)
+        makePx numer =
+            toFloat numer / (zoom * cellSizePx)
     in
-    { x = cellXY.x * px + pxXY.x
-    , y = cellXY.y * px + pxXY.y
+    { cell = cellXY
+    , px =
+        { x = makePx pxXY.x
+        , y = makePx pxXY.y
+        }
     }
 
 
@@ -338,16 +349,31 @@ viewDrawTab _ =
 viewDraw : Float -> Lines.Point -> Draw -> Html msg
 viewDraw zoom size { currentLine, oldLines } =
     let
-        wh n =
-            String.fromInt (floor (zoom * cellSizePx * toFloat n)) ++ "px"
+        pxPerCell =
+            zoom * cellSizePx
 
-        lines =
+        wh n =
+            String.fromInt (floor (toFloat n * pxPerCell)) ++ "px"
+
+        drawLines =
             case currentLine of
                 Nothing ->
                     oldLines
 
                 Just { pos, points } ->
                     ( pos, points ) :: oldLines
+
+        rasterizePoint { cell, px } =
+            { x = floor <| pxPerCell * (toFloat cell.x + px.x)
+            , y = floor <| pxPerCell * (toFloat cell.y + px.y)
+            }
+
+        lines =
+            drawLines
+                |> List.map
+                    (\( p, ps ) ->
+                        ( rasterizePoint p, List.map rasterizePoint ps )
+                    )
     in
     lines
         |> List.map Lines.reverse
@@ -412,7 +438,7 @@ viewGrid m =
                                         Nothing ->
                                             [ Events.onMouseDown
                                                 (\pxXY ->
-                                                    MouseDown
+                                                    StartDraw
                                                         (subCellPoint
                                                             m.zoom
                                                             { x = x - 1, y = y - 1 }
@@ -424,14 +450,14 @@ viewGrid m =
                                         Just _ ->
                                             [ Events.onMouseMove
                                                 (\pxXY ->
-                                                    MouseMove
+                                                    MoveDraw
                                                         (subCellPoint
                                                             m.zoom
                                                             { x = x - 1, y = y - 1 }
                                                             pxXY
                                                         )
                                                 )
-                                            , onMouseUp MouseUp
+                                            , onMouseUp StopDraw
                                             ]
                                     )
                                 )
@@ -894,7 +920,7 @@ update msg model =
             , Cmd.none
             )
 
-        ( MouseDown pos, Ready ({ draw } as m) ) ->
+        ( StartDraw pos, Ready ({ draw } as m) ) ->
             ( Ready
                 { m
                     | draw =
@@ -909,7 +935,7 @@ update msg model =
             , Cmd.none
             )
 
-        ( MouseMove pos, Ready ({ draw } as m) ) ->
+        ( MoveDraw pos, Ready ({ draw } as m) ) ->
             case draw.currentLine of
                 Nothing ->
                     ( Ready m, Cmd.none )
@@ -929,7 +955,7 @@ update msg model =
                     , Cmd.none
                     )
 
-        ( MouseUp, Ready ({ draw } as m) ) ->
+        ( StopDraw, Ready ({ draw } as m) ) ->
             case draw.currentLine of
                 Nothing ->
                     ( Ready m, Cmd.none )
